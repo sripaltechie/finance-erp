@@ -1,0 +1,106 @@
+
+
+
+
+
+
+
+Folder Structure
+
+finance-erp/
+├── backend/            # Node.js + Express + MongoDB API
+├── admin-web/          # React.js + Vite (For Owner/Admin)
+└── collection-app/     # React Native + Expo (For Staff)
+
+
+backend/
+├── src/
+│   ├── config/             # DB connection, Environment variables
+│   │   └── db.js
+│   ├── models/             # Mongoose Schemas (The DB Design we discussed)
+|   |   ├── Client.js       # SaaS Customer
+│   │   ├── Company.js      # Specific Branch
+│   │   ├── User.js         # Staff (linked to Company)
+│   │   ├── Customer.js
+│   │   ├── Loan.js
+│   │   ├── Transaction.js
+│   │   └── SystemSettings.js
+│   ├── controllers/        # Incoming Request Handlers
+│   │   ├── authController.js
+│   │   ├── loanController.js
+│   │   └── reportController.js
+│   ├── services/           # CORE LOGIC (Reusable Functions)
+│   │   ├── creditScoreService.js  # Logic for +10/-5 points
+│   │   ├── calculationService.js  # Logic for Daily Index/Partial calc
+│   │   └── notificationService.js # Telegram/SMS logic
+│   ├── jobs/               # Cron Jobs (Schedulers)
+│   │   └── nightlyPenalty.js      # Runs at 11:59 PM
+│   ├── routes/             # API Endpoints
+│   │   ├── authRoutes.js
+│   │   └── apiRoutes.js
+│   ├── middleware/         # Auth checks, Error handling
+│   │   ├── tenantMiddleware.js  # Enforces Company Isolation
+│   │   ├── authMiddleware.js
+│   │   └── errorMiddleware.js
+│   └── app.js              # Express App Entry Point
+├── .env                    # Secrets (Port, Mongo URI, JWT Secret)
+└── package.json
+
+
+admin-web/
+├── src/
+│   ├── assets/             # Images, Icons
+│   ├── components/         # REUSABLE UI Elements (Dumb components)
+│   │   ├── common/         # Buttons, Inputs, Modals, Loaders
+│   │   └── layout/         # Sidebar, Header, ProtectedRoute
+│   ├── pages/              # MAIN SCREENS
+│   │   ├── Dashboard/
+│   │   ├── Customers/
+│   │   │   ├── CustomerList.jsx
+│   │   │   └── CustomerDetail.jsx
+│   │   ├── Loans/
+│   │   └── Settings/
+│   ├── context/            # Global State (Auth, Theme)
+│   │   └── AuthContext.jsx
+│   ├── hooks/              # Custom Logic Hooks
+│   │   └── useAxios.js     # Centralized API caller
+│   ├── services/           # API Endpoints Definitions
+│   │   └── api.js          # All backend calls defined here
+│   ├── utils/              # Formatters (Currency, Date)
+│   └── App.jsx             # Routing Logic
+└── package.json
+
+
+
+collection-app/
+├── app/                    # EXPO ROUTER (Navigation)
+│   ├── (auth)/             # Login Screens (Excluded from tabs)
+│   │   └── login.jsx
+│   ├── (tabs)/             # Main Tab Bar Screens
+│   │   ├── index.jsx       # Dashboard
+│   │   ├── collection.jsx  # Daily Route List
+│   │   └── profile.jsx
+│   └── _layout.jsx         # Main Layout Wrapper
+├── src/
+│   ├── components/         # REUSABLE UI
+│   │   ├── inputs/         # Quick Amount Input, Date Picker
+│   │   └── cards/          # CustomerCard, TransactionRow
+│   ├── api/                # Backend Connection
+│   │   ├── client.js       # Axios Instance
+│   │   └── endpoints.js    # List of API URLs
+│   ├── context/            # Global State
+│   │   └── AuthContext.js
+│   ├── constants/          # Colors, Fonts, Config
+│   │   └── Colors.js
+│   └── utils/              # Offline storage helpers (AsyncStorage)
+├── assets/
+└── package.json
+
+
+Controller Logic (The "Scoped" Query)
+Instead of Loan.find(), you will ALWAYS write:
+// Safe Multi-Tenant Query
+const loans = await Loan.find({ 
+    companyId: req.companyId,  // <--- The magic filter
+    status: 'Active' 
+});
