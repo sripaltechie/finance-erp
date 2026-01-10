@@ -1,37 +1,61 @@
-// File: backend/src/models/Loan.js
 const mongoose = require('mongoose');
 
 const LoanSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   
-  loanType: { 
-    type: String, 
-    enum: ['Daily', 'Monthly'], 
-    required: true 
-  },
-  
-  status: { type: String, enum: ['Active', 'Closed', 'Rollover'], default: 'Active' },
+  // Core Details
+  loanType: { type: String, enum: ['Daily', 'Monthly'], required: true },
+  status: { type: String, enum: ['Active', 'Closed', 'Rollover', 'Bad_Debt'], default: 'Active' },
   startDate: { type: Date, default: Date.now },
 
-  // --- Financials ---
-  principalAmount: { type: Number, required: true }, // The main loan (e.g., 10,000)
+  // 💰 THE MONEY BREAKDOWN
+  principalAmount: { type: Number, required: true }, // e.g., 10,000 (The "Chit Value")
   
-  // 🗓️ LOGIC FOR DAILY LOANS
-  dailyInstallmentAmount: { type: Number }, // e.g., 500
-  totalDays: { type: Number },              // e.g., 100
-  lastPaidIndex: { type: Number, default: 0 }, // e.g., 55 (Means 55 days fully paid)
-  partialPaymentBalance: { type: Number, default: 0 }, // e.g., 200 (Held for Day 56)
+  // Deductions Logic (Upfront/End, Fixed/%)
+  deductions: [{
+    name: { type: String }, // e.g., "Document Fee"
+    amount: { type: Number },
+    type: { type: String, enum: ['Fixed', 'Percentage'] },
+    value: { type: Number }, // Store the % (e.g., 2) or fixed val (e.g., 500)
+    timing: { type: String, enum: ['Upfront', 'End_of_Loan'] }, // Upfront = Cut now. End = Add to due.
+    isApplied: { type: Boolean, default: true }
+  }],
 
-  // 📅 LOGIC FOR MONTHLY LOANS
-  monthlyInterestRate: { type: Number }, // e.g., 2 (%)
-  currentPrincipalBalance: { type: Number }, // Starts = principalAmount. Reduces on payment.
-  interestDue: { type: Number, default: 0 }, // Accumulated unpaid interest
-  nextInterestGenerationDate: { type: Date }, // When to run the Cron Job next
+  // 🔄 ROLLOVER (Old Loan Adjustment)
+  rollover: {
+    linkedLoanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Loan' },
+    amountDeducted: { type: Number, default: 0 } // Amount cut from new loan to close old one
+  },
 
-  // Meta
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  notes: String
+  // 💸 NET DISBURSEMENT (What actually left the shop)
+  netDisbursement: { type: Number }, // Principal - Upfront Deductions - Rollover
+  
+  // Payment Split (How you gave the money)
+  disbursementMode: {
+    cashAmount: { type: Number, default: 0 },
+    onlineAmount: { type: Number, default: 0 },
+    transactionRef: { type: String } // UPI Ref ID if any
+  },
+
+  // 🧠 CALCULATION RULES (Future-Proofing)
+  rules: {
+    // For Daily
+    dailyInstallment: Number,
+    totalDays: Number,
+    penaltyPerDayAfterDue: { type: Number, default: 0 }, // e.g., ₹10 per day after 100 days
+    dueDate: Date, // Auto-calculated (Start + 100 days)
+
+    // For Monthly
+    interestRate: Number, // % per month
+    interestType: { type: String, enum: ['Simple', 'Compound'], default: 'Simple' }
+  },
+
+  // Running Balances
+  summary: {
+    amountPaid: { type: Number, default: 0 },
+    pendingBalance: { type: Number } // Auto-updated
+  }
 
 }, { timestamps: true });
 

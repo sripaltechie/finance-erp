@@ -11,7 +11,10 @@ const CompanySchema = new mongoose.Schema({
   name: { type: String, required: true }, // e.g. "Sai Finance - Vijayawada"
   address: { type: String },
   logoUrl: { type: String },
-  
+  capital: {
+    cashBalance: { type: Number, default: 0 },   // Physical Cash in Drawer
+    bankBalance: { type: Number, default: 0 }    // UPI/Bank Balance
+  },
   // ⚙️ THE FEATURE SETTINGS (Admin Controls)
   settings: {
     // Loan Logic
