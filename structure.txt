@@ -260,3 +260,35 @@ Client Registers -> Status Pending.
 You List Clients -> See Pending ones.
 
 You Approve Client -> Status Active + Expiry Set.
+
+inital capital wil be of the client i dont have any link with their business and profits 
+capital wil be separate for each company and  branches 
+total  of branches capital will be the capital of client
+ask while creating branch for initial capital later can be changed by client admin page 
+
+
+This is the most critical logic because it ties everything together:
+
+Customer gets the money.
+
+Company Capital decreases (Disbursement).
+
+Loan Schedule is generated (Daily Index or Monthly Interest).
+
+
+How the "Logic" Matches Your Requirement
+Daily Logic (The Index):
+
+When we create a Daily Loan, we set lastPaidIndex: 0.
+
+Later, when a payment of 1200 comes in (for a 500 installment), the backend will check loan.dailyInstallmentAmount (500) and do the math 1200 / 500 = 2.4.
+
+It will update lastPaidIndex to 2 and store 200 in partialPaymentBalance.
+
+Monthly Logic (Reducing Balance):
+
+We store currentPrincipalBalance.
+
+We set a nextInterestGenerationDate.
+
+A nightly Cron Job (which we will build later) will find all Monthly loans where Date >= nextInterestGenerationDate, calculate Balance * Rate / 100, and add it to interestDue.
