@@ -10,6 +10,11 @@ const CompanySchema = new mongoose.Schema({
   
   name: { type: String, required: true }, // e.g. "Sai Finance - Vijayawada"
   address: { type: String },
+  // 💰 NEW: Capital Management
+  capital: {
+    initial: { type: Number, default: 0 },   // The starting amount
+    current: { type: Number, default: 0 }    // Changes with profit/loss/withdrawals
+  },
   logoUrl: { type: String },
   capital: {
     cashBalance: { type: Number, default: 0 },   // Physical Cash in Drawer
