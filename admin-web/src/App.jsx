@@ -8,7 +8,7 @@ import CompanySetup from './pages/Client/CompanySetup';
 import StaffManagement from './pages/Client/StaffManagement';
 
 // Mock User for Testing (Change role to test different views)
-const mockUser = { role: 'Client_Admin', name: 'Ramesh Gupta' };
+const mockUser = { role: 'Super_Admin', name: 'Ramesh Gupta' };
 
 // Layout Wrapper (Adds Sidebar to pages)
 const DashboardLayout = () => (

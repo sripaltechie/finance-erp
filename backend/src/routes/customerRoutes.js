@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyClient } = require('../middleware/authMiddleware'); // Your Auth Guard
+const { verifyUser } = require('../middleware/authMiddleware'); // Your Auth Guard
 const { 
     createCustomer, 
     getCustomers, 
@@ -10,7 +10,7 @@ const {
 } = require('../controllers/customerController'); // The file you provided
 
 // Protect all routes (Only logged in staff/admin can access)
-router.use(verifyClient);
+router.use(verifyUser);
 
 // 1. List & Create
 router.get('/', getCustomers);
