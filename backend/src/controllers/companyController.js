@@ -4,6 +4,55 @@ const CapitalLog = require('../models/CapitalLog');
 
 // @desc    Create a new Company (Branch)
 // @route   POST /api/companies
+
+exports.addPaymentMode = async (req, res) => {
+  try {
+    const { id } = req.params; // Company ID
+    const { name, type, initialBalance } = req.body;
+    const clientId = req.user.id;
+
+    // 1. Fetch Company & Client
+    const company = await Company.findOne({ _id: id, clientId });
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    const client = await Client.findById(clientId);
+
+    // 2. 🛡️ PLAN RESTRICTION LOGIC
+    // Define Limits (You can move this to a config file later)
+    const PLAN_LIMITS = {
+      'Basic': 2,    // e.g. 1 Cash + 1 Bank
+      'Pro': 5,      // e.g. 2 Cash + 3 Banks
+      'Enterprise': 99 // Unlimited
+    };
+
+    const currentCount = company.paymentModes.length;
+    const allowedLimit = PLAN_LIMITS[client.subscriptionPlan] || 2;
+
+    if (currentCount >= allowedLimit) {
+      return res.status(403).json({ 
+        message: `Plan Limit Reached! Your ${client.subscriptionPlan} plan allows max ${allowedLimit} payment modes. Upgrade to add more.` 
+      });
+    }
+
+    // 3. Add New Mode
+    const newMode = {
+      name,
+      type, // 'Cash' or 'Online'
+      initialBalance: Number(initialBalance) || 0,
+      currentBalance: Number(initialBalance) || 0
+    };
+
+    company.paymentModes.push(newMode);
+    await company.save();
+
+    res.status(201).json(company.paymentModes);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 exports.createCompany = async (req, res) => {
   try {
     const { name, address, settings,initialCapital } = req.body;

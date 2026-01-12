@@ -8,6 +8,12 @@ const TransactionSchema = new mongoose.Schema({
   collectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   
   amount: { type: Number, required: true }, // Total Cash Received
+  paymentSplit: [{
+        modeId: { type: mongoose.Schema.Types.ObjectId, required: true }, // Links to Company.paymentModes._id
+        modeName: { type: String }, // Snapshot (in case name changes later)
+        amount: { type: Number, required: true }
+    }],
+  installmentIndexes: [Number],
   date: { type: Date, default: Date.now },
 
   // 🧠 LOGIC: Breakdown of where the money went

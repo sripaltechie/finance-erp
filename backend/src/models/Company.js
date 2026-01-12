@@ -1,6 +1,19 @@
 // File: backend/src/models/Company.js
 const mongoose = require('mongoose');
 
+
+const PaymentModeSchema = new mongoose.Schema({
+  name: { type: String, required: true }, // e.g., "HDFC Bank", "Main Cash Drawer"
+  type: { type: String, enum: ['Cash', 'Online'], required: true },
+  
+  // 💰 Money Management
+  initialBalance: { type: Number, default: 0 },
+  currentBalance: { type: Number, default: 0 }, // Updates with every transaction
+  
+  isActive: { type: Boolean, default: true }
+});
+
+
 const CompanySchema = new mongoose.Schema({
   clientId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -11,15 +24,8 @@ const CompanySchema = new mongoose.Schema({
   name: { type: String, required: true }, // e.g. "Sai Finance - Vijayawada"
   address: { type: String },
   // 💰 NEW: Capital Management
-  capital: {
-    initial: { type: Number, default: 0 },   // The starting amount
-    current: { type: Number, default: 0 }    // Changes with profit/loss/withdrawals
-  },
+  paymentModes: [PaymentModeSchema],
   logoUrl: { type: String },
-  capital: {
-    cashBalance: { type: Number, default: 0 },   // Physical Cash in Drawer
-    bankBalance: { type: Number, default: 0 }    // UPI/Bank Balance
-  },
   // ⚙️ THE FEATURE SETTINGS (Admin Controls)
   settings: {
     // Loan Logic
@@ -42,5 +48,10 @@ const CompanySchema = new mongoose.Schema({
 
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
+
+CompanySchema.virtual('totalCapital').get(function() {
+  if (!this.paymentModes) return 0;
+  return this.paymentModes.reduce((sum, mode) => sum + (mode.currentBalance || 0), 0);
+});
 
 module.exports = mongoose.model('Company', CompanySchema);
