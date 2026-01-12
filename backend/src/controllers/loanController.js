@@ -1,3 +1,4 @@
+const mongoose = require('mongoose'); // Ensure mongoose is imported
 const Loan = require('../models/Loan');
 const Company = require('../models/Company');
 const Customer = require('../models/Customer');
@@ -6,55 +7,80 @@ const CapitalLog = require('../models/CapitalLog');
 // @desc    Create Loan with Advanced Calculation (Deductions, Rollover, Split Payment)
 // @route   POST /api/loans/create-advanced
 exports.createAdvancedLoan = async (req, res) => {
-  const session = await mongoose.startSession(); // Use Transaction for safety
+  const session = await mongoose.startSession(); 
   session.startTransaction();
 
   try {
     const { 
       customerId, loanType, principalAmount, startDate,
       deductions, // Array: [{ name: 'Doc Fee', type: 'Fixed', value: 200, timing: 'Upfront' }]
-      rolloverLoanId, // Optional: Old Loan ID to close
-      paymentMode, // { cash: 6000, online: 4000 }
+      deductionConfig, // <--- NEW: Contains { interest: true/false }
+      rolloverLoanId, 
+      paymentMode, 
+      notes, // <--- NEW: Optional notes field
       
       // Rules
-      dailyConfig, // { installment: 100, days: 100, penaltyAfterDue: 10 }
-      monthlyConfig // { rate: 2 }
+      dailyConfig, 
+      monthlyConfig 
     } = req.body;
 
     const companyId = req.user.companyId;
 
-    // 1. CALCULATE DEDUCTIONS
+    // 1. CALCULATE DEDUCTIONS (Fees + Charges)
     let upfrontDeductionTotal = 0;
+    
+    // A. Standard Deductions (Doc charges, etc.)
     const processedDeductions = deductions.map(d => {
       let amt = d.type === 'Fixed' ? d.value : (principalAmount * d.value / 100);
       if (d.timing === 'Upfront') upfrontDeductionTotal += amt;
       return { ...d, amount: amt };
     });
 
+    // B. NEW: Interest Deduction Logic
+    let interestDeductedAmount = 0;
+    if (deductionConfig && deductionConfig.interest) {
+        if (loanType === 'Monthly') {
+            // Calculate 1 Month Interest: (P * R) / 100
+            interestDeductedAmount = (principalAmount * monthlyConfig.rate) / 100;
+        } else {
+            // For Daily, logic varies. Leaving 0 or customize here (e.g. 1st installment)
+            interestDeductedAmount = 0; 
+        }
+        
+        // Add to total upfront deductions
+        upfrontDeductionTotal += interestDeductedAmount;
+        
+        // Push to processed deductions for record keeping
+        processedDeductions.push({
+            name: 'Upfront Interest',
+            type: 'calculated',
+            amount: interestDeductedAmount,
+            timing: 'Upfront'
+        });
+    }
+
     // 2. HANDLE ROLLOVER (Old Loan)
     let rolloverAmount = 0;
     if (rolloverLoanId) {
       const oldLoan = await Loan.findById(rolloverLoanId).session(session);
       if (oldLoan) {
-        // Calculate pending balance of old loan
         rolloverAmount = oldLoan.summary.pendingBalance || 0;
         
-        // Close the Old Loan
         oldLoan.status = 'Rollover';
-        oldLoan.summary.pendingBalance = 0; // Cleared
+        oldLoan.summary.pendingBalance = 0; 
         await oldLoan.save({ session });
       }
     }
 
     // 3. CALCULATE NET DISBURSEMENT (Cash needed from drawer)
-    // Formula: Principal - (Fees) - (Old Loan Debt)
     const netToPay = principalAmount - upfrontDeductionTotal - rolloverAmount;
 
     // 4. VALIDATE SPLIT PAYMENT matches NetToPay
     const cashOut = Number(paymentMode.cash || 0);
     const onlineOut = Number(paymentMode.online || 0);
 
-    if (cashOut + onlineOut !== netToPay) {
+    // Allow small floating point differences
+    if (Math.abs((cashOut + onlineOut) - netToPay) > 1) {
       throw new Error(`Mismatch! Net Payable is ${netToPay}, but you entered ${cashOut + onlineOut}`);
     }
 
@@ -72,6 +98,7 @@ exports.createAdvancedLoan = async (req, res) => {
       principalAmount,
       startDate: startDate || new Date(),
       deductions: processedDeductions,
+      notes: notes || "", // <--- NEW: Save notes (default empty string)
       
       rollover: { linkedLoanId: rolloverLoanId, amountDeducted: rolloverAmount },
       netDisbursement: netToPay,
@@ -90,9 +117,12 @@ exports.createAdvancedLoan = async (req, res) => {
 
       summary: {
         amountPaid: 0,
+        // NEW: If interest is deducted upfront for Monthly, balance is Principal
+        // If NOT deducted, balance is usually Principal (interest added later).
+        // For Daily, it remains (Installment * Days).
         pendingBalance: loanType === 'Daily' 
-          ? (dailyConfig.installment * dailyConfig.days) // Daily: Total Repayable (e.g. 10,000 + Interest implicitly)
-          : principalAmount // Monthly: Principal stays until paid
+          ? (dailyConfig.installment * dailyConfig.days) 
+          : principalAmount 
       }
     });
 

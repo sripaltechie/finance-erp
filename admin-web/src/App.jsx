@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
+import Capital from './pages/Client/Capital';
+import LoanOrigination from './pages/Client/LoanOrigination';
 
 // Import Pages
 import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
@@ -41,8 +43,9 @@ function App() {
           <Route path="/dashboard" element={<div className="p-8"><h1>Main Dashboard (Coming Soon)</h1></div>} />
           <Route path="/customers" element={<div className="p-8"><h1>Customer List (Coming Soon)</h1></div>} />
           <Route path="/loans" element={<div className="p-8"><h1>Loan Management (Coming Soon)</h1></div>} />
-          <Route path="/client/capital" element={<div className="p-8"><h1>Capital & Wallet (Coming Soon)</h1></div>} />
-
+          {/* <Route path="/client/capital" element={<div className="p-8"><h1>Capital & Wallet (Coming Soon)</h1></div>} /> */}
+          <Route path="/client/capital" element={<Capital />} />
+          <Route path="/client/loans/create" element={<LoanOrigination />} />
         </Route>
       </Routes>
     </BrowserRouter>

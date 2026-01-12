@@ -4,6 +4,8 @@ const CapitalLog = require('../models/CapitalLog');
 
 // @desc    Create a new Company (Branch)
 // @route   POST /api/companies
+// @desc    Add a New Payment Mode (Wallet)
+// @route   POST /api/companies/:id/payment-modes
 
 exports.addPaymentMode = async (req, res) => {
   try {

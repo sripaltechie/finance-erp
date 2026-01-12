@@ -47,7 +47,11 @@ const CompanySchema = new mongoose.Schema({
   },
 
   isActive: { type: Boolean, default: true }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
 CompanySchema.virtual('totalCapital').get(function() {
   if (!this.paymentModes) return 0;
