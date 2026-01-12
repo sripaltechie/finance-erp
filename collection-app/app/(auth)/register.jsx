@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { Check, X, Smartphone, Globe, Monitor } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { PLATFORMS, DURATIONS, BASE_PRICES, PLANS } from '../../../shared/PricingData';
+import { PLATFORMS, DURATIONS, BASE_PRICES, PLANS } from '@/../shared/PricingData';
 import {API_URL} from '../../src/constants/Config';
 import { registerClientService } from '../../src/api/authService';
 
@@ -49,10 +49,10 @@ const handleRegister = async (planId, isDemo = false) => {
       // 3. Success Handling
       if(isDemo) {
         Alert.alert("Welcome!", "Your 7-Day Demo is active. Please login.");
-        router.replace('/(auth)/login'); // Redirect to login
+        router.replace('/'); // Redirect to login
       } else {
         Alert.alert("Registration Successful", "Please contact Admin to activate your account.");
-        router.replace('/(auth)/login');
+        router.replace('/');
       }
 
     } catch (error) {

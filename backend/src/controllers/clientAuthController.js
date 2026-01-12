@@ -1,6 +1,7 @@
 const Client = require('../models/Client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Company = require('../models/Company'); 
 
 // @desc    Register a new SaaS Client
 // @route   POST /api/auth/client/register
@@ -40,43 +41,47 @@ exports.registerClient = async (req, res) => {
 // @route   POST /api/auth/client/login
 exports.loginClient = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email,mobile, password } = req.body;
+     // 1. Check if client exists (Search by Email OR Mobile)
+    // We construct a dynamic query
+    let query = {};
+    if (email) query.email = email;
+    if (mobile) query.mobile = mobile;
+    if (Object.keys(query).length === 0) {
+      return res.status(400).json({ message: "Please provide email or mobile" });
+    }
 
+    const client = await Client.findOne(query); //
     // 1. Check if client exists
-    const client = await Client.findOne({ email });
     if (!client) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "User not found" });
     }
 
     // 2. Check Password
     const isMatch = await bcrypt.compare(password, client.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid Credentials" });
     }
 
     // 3. CRITICAL: Check Approval Status
     // If you just registered, your status is 'Pending'. You cannot login yet.
     // For TESTING: You might want to manually change this to 'Active' in MongoDB Compass
     if (client.accountStatus !== 'Active') {
-      return res.status(403).json({ message: "Your account is Pending Approval. Contact Admin." });
+      return res.status(403).json({ message: "Account Pending Approval" });
     }
-
+    
     // 4. Generate Token
-    const token = jwt.sign(
-      { id: client._id, role: 'Client' }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: '30d' }
-    );
+    const token = jwt.sign({ id: client._id, role: 'Client' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    // 5. Send Response
+    // 🟢 5. FETCH COMPANIES OWNED BY THIS CLIENT
+    const companies = await Company.find({ clientId: client._id }).select('_id name');
+
     res.json({
       _id: client._id,
       ownerName: client.ownerName,
-      businessName: client.businessName,
-      token: token, // <--- This is what the Frontend needs
-      role: 'Client'
+      token: token,
+      companies: companies, // <--- Send list so App can pick one
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

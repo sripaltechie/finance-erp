@@ -1,4 +1,7 @@
 const Capital = require('../models/Capital');
+const Loan = require('../models/Loan');
+const Company = require('../models/Company');
+const Transaction = require('../models/Transaction');
 
 // @desc    Add Capital (Investment)
 // @route   POST /api/capital
@@ -47,4 +50,61 @@ const getCapitalStats = async (req, res) => {
     }
 };
 
-module.exports = { addCapital, getCapitalStats };
+
+// @desc    Get Dashboard Stats for Client
+// @route   GET /api/capital/dashboard-stats
+const getDashboardStats = async (req, res) => {
+    try {
+    // 🟢 1. GET COMPANY ID FROM QUERY PARAMS
+    const { companyId } = req.query; 
+
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID is required" });
+    }
+
+    // 🟢 2. SECURITY CHECK: Ensure this Client actually owns this Company
+    // req.user.id comes from the Token (Client ID)
+    const company = await Company.findOne({ _id: companyId, clientId: req.user.id });
+    
+    if (!company) {
+      return res.status(403).json({ message: "Access denied. You do not own this company." });
+    }
+
+    // 3. (Rest of the logic remains the same, using 'company._id') ...
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const todayTransactions = await Transaction.aggregate([
+      { 
+        $match: { 
+          companyId: company._id, 
+          type: 'Credit',
+          date: { $gte: startOfDay, $lte: endOfDay } 
+        } 
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const activeLoansCount = await Loan.countDocuments({ companyId: company._id, status: 'Active' });
+
+    const marketOutstanding = await Loan.aggregate([
+        { $match: { companyId: company._id, status: 'Active' } },
+        { $group: { _id: null, total: { $sum: "$summary.pendingBalance" } } }
+    ]);
+
+    res.json({
+      cashBalance: company.capital?.cashBalance || 0,
+      bankBalance: company.capital?.bankBalance || 0,
+      todayCollection: todayTransactions.length > 0 ? todayTransactions[0].total : 0,
+      activeLoans: activeLoansCount,
+      overdueAmount: marketOutstanding.length > 0 ? marketOutstanding[0].total : 0
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+module.exports = { addCapital, getCapitalStats, getDashboardStats};
+

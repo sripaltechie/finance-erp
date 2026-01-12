@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Lock, Smartphone, ArrowRight } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Import Storage
+
+// 2. Import Service
+import { loginClientService } from '../../src/api/authService';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -9,19 +13,45 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!mobile || !password) {
       Alert.alert("Error", "Please enter Mobile & Password");
       return;
     }
-    setLoading(true);
     
-    // Simulate API Call
-    setTimeout(() => {
-      setLoading(false);
-      // Navigate to the Main App (Tabs)
+    setLoading(true);
+
+    try {
+      // 3. Call Backend
+      const data = await loginClientService({ mobile, password });
+
+      // 4. Save Session (CRITICAL STEP)
+      await AsyncStorage.setItem('token', data.token); //
+      await AsyncStorage.setItem('userInfo', JSON.stringify(data));
+      // 🟢 NEW: Handle Company Selection
+      if (data.companies && data.companies.length > 0) {
+        // Default to the first company for now
+        // In a real app, you might show a "Select Branch" screen here
+        await AsyncStorage.setItem('activeCompanyId', data.companies[0]._id);
+      } else {
+        Alert.alert("Notice", "No companies found. Please create a branch via Web Admin.");
+      }
+      
+      router.replace('/(tabs)');
+      
+      Alert.alert("Success", "Welcome back, " + data.ownerName);
+
+      // 5. Navigate to Dashboard (Tabs)
+      // Note: We use replace to prevent going back to login
       router.replace('/(tabs)'); 
-    }, 1000);
+
+    } catch (error) {
+      console.error("Login Error:", error);
+      const msg = error.response?.data?.message || "Login Failed";
+      Alert.alert("Error", msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,6 +75,7 @@ export default function LoginScreen() {
               keyboardType="phone-pad"
               value={mobile}
               onChangeText={setMobile}
+              autoCapitalize="none"
             />
           </View>
         </View>
@@ -63,14 +94,24 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.btn} onPress={handleLogin}>
-          <Text style={styles.btnText}>{loading ? "Verifying..." : "Login Securely"}</Text>
-          <ArrowRight size={20} color="#fff" />
+        <TouchableOpacity 
+          style={[styles.btn, loading && { opacity: 0.7 }]} 
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+             <ActivityIndicator color="#fff" />
+          ) : (
+             <>
+               <Text style={styles.btnText}>Login Securely</Text>
+               <ArrowRight size={20} color="#fff" />
+             </>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>New Business Owner? </Text>
-          <Link href="/(auth)/register" asChild>
+          <Link href="/register" asChild>
             <TouchableOpacity>
               <Text style={styles.link}>Register Here</Text>
             </TouchableOpacity>

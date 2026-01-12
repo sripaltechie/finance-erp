@@ -13,7 +13,8 @@ const app = express();
 app.use(express.json());
 app.use(cors({
     origin: '*', // Allows mobile devices and web browsers to connect
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Database Connection
