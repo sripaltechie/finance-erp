@@ -4,7 +4,9 @@ import {
 } from 'react-native';
 import { Check, X, Smartphone, Globe, Monitor } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { PLATFORMS, DURATIONS, BASE_PRICES, PLANS } from '../../src/constants/PricingData';
+import { PLATFORMS, DURATIONS, BASE_PRICES, PLANS } from '../../../shared/PricingData';
+import {API_URL} from '../../src/constants/Config';
+import { registerClientService } from '../../src/api/authService';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -25,7 +27,8 @@ export default function RegisterScreen() {
     return Math.round(discounted);
   };
 
-  const handleRegister = (planId, isDemo = false) => {
+const handleRegister = async (planId, isDemo = false) => {
+    // 1. Prepare Data
     const finalPayload = {
       ...formData,
       plan: isDemo ? 'Demo' : planId,
@@ -34,15 +37,28 @@ export default function RegisterScreen() {
       price: isDemo ? 0 : getPrice(planId),
       isDemo
     };
-    
-    console.log("SEND TO API:", finalPayload);
-    
-    if(isDemo) {
-        Alert.alert("Welcome!", "Your 7-Day Demo is active. No payment required.");
-        router.replace('/(tabs)');
-    } else {
-        Alert.alert("Request Sent", "Please contact Admin to complete payment of ₹" + finalPayload.price);
-        // Navigate to a "Waiting for Approval" screen
+
+    console.log("Sending Payload:", finalPayload);
+
+    try {
+      // 2. API Call
+      // Replace with your actual backend IP/URL
+      // e.g., 'http://192.168.1.5:5000/api/auth/client/register'
+      const response = await registerClientService(finalPayload);
+
+      // 3. Success Handling
+      if(isDemo) {
+        Alert.alert("Welcome!", "Your 7-Day Demo is active. Please login.");
+        router.replace('/(auth)/login'); // Redirect to login
+      } else {
+        Alert.alert("Registration Successful", "Please contact Admin to activate your account.");
+        router.replace('/(auth)/login');
+      }
+
+    } catch (error) {
+      console.error("Registration Error:", error);
+      const msg = error.response?.data?.message || "Registration Failed";
+      Alert.alert("Error", msg);
     }
   };
 

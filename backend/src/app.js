@@ -28,17 +28,20 @@ const connectDB = async () => {
 };
 
 // Routes
+const authRoutes = require('./routes/authRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const capitalRoutes = require('./routes/capitalRoutes'); // You need to create this similar to customerRoutes
 const transactionRoutes  = require('./routes/transactionRoutes');
+const loanRoutes = require('./routes/loanRoutes');
 
 // ... middlewares ...
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/capital', capitalRoutes); // New Capital Module
 app.use('/api/transactions', transactionRoutes)
-
+app.use('/api/loans', loanRoutes);
 // ... server listen ...
 
 // Base Route

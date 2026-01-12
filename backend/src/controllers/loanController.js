@@ -9,7 +9,7 @@ const CapitalLog = require('../models/CapitalLog');
 exports.createAdvancedLoan = async (req, res) => {
   const session = await mongoose.startSession(); 
   session.startTransaction();
-
+  
   try {
     const { 
       customerId, loanType, principalAmount, startDate,
@@ -151,5 +151,116 @@ exports.createAdvancedLoan = async (req, res) => {
     await session.abortTransaction();
     session.endSession();
     res.status(400).json({ message: error.message });
+  }
+};
+
+// @route   GET /api/loans/:id
+exports.getLoanDetails = async (req, res) => {
+  try {
+    const loan = await Loan.findById(req.params.id)
+      .populate('customerId', 'name mobile address')
+      .populate('companyId', 'name');
+
+    if (!loan) return res.status(404).json({ message: "Loan not found" });
+
+    // --- 🧮 DYNAMIC CALCULATIONS ---
+    let stats = {
+      daysPassed: 0,
+      isOverdue: false,
+      overdueDays: 0,
+      suggestedPenalty: 0
+    };
+
+    if (loan.loanType === 'Daily' && loan.status === 'Active') {
+      const start = new Date(loan.startDate);
+      const now = new Date();
+      const diffTime = Math.abs(now - start);
+      const daysPassed = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      
+      stats.daysPassed = daysPassed;
+      const totalDaysAllowed = loan.rules.totalDays || 100;
+
+      if (daysPassed > totalDaysAllowed) {
+        stats.isOverdue = true;
+        stats.overdueDays = daysPassed - totalDaysAllowed;
+        // Calculate Penalty (e.g., ₹10 * Overdue Days)
+        const penaltyPerDay = loan.rules.penaltyPerDayAfterDue || 0; 
+        stats.suggestedPenalty = stats.overdueDays * penaltyPerDay;
+      }
+    }
+
+    res.json({ loan, stats });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// @desc    Apply Penalty to a Loan (Manual or Auto-calculated)
+// @route   POST /api/loans/:id/penalty
+exports.applyPenalty = async (req, res) => {
+  try {
+    const { amount, reason } = req.body; // e.g., { amount: 500, reason: "Overdue 105 days" }
+    
+    const loan = await Loan.findById(req.params.id);
+    if (!loan) return res.status(404).json({ message: "Loan not found" });
+
+    if (loan.status !== 'Active') {
+      return res.status(400).json({ message: "Cannot apply penalty to inactive loan" });
+    }
+
+    // 1. Update Balance
+    loan.summary.pendingBalance += Number(amount);
+    
+    // 2. Add to History/Notes (Optional but good for tracking)
+    // We append this event to the notes field for now, or you could create a separate 'penaltyLog' array later
+    const dateStr = new Date().toLocaleDateString();
+    loan.notes = (loan.notes || "") + `\n[${dateStr}] Penalty Applied: ₹${amount} (${reason})`;
+
+    await loan.save();
+
+    res.json({ message: "Penalty applied successfully", loan });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// @desc    Add Repayment (Collection)
+// @route   POST /api/loans/:id/repayment
+exports.addRepayment = async (req, res) => {
+  try {
+    const { amount, type } = req.body; // type = 'Cash' or 'Online'
+    
+    const loan = await Loan.findById(req.params.id);
+    if (!loan) return res.status(404).json({ message: "Loan not found" });
+
+    if (loan.status === 'Closed') {
+      return res.status(400).json({ message: "Loan is already closed" });
+    }
+
+    const payAmount = Number(amount);
+
+    // 1. Update Loan Summary
+    loan.summary.amountPaid += payAmount;
+    loan.summary.pendingBalance -= payAmount; // Reduce balance
+
+    // 2. Check if Loan is Closed
+    if (loan.summary.pendingBalance <= 0) {
+      loan.status = 'Closed';
+      loan.summary.pendingBalance = 0; // Prevent negative balance
+    }
+
+    // 3. Log the Transaction (Optional but recommended)
+    // You can also push to a history array in the Loan model or a separate Transaction model
+
+    await loan.save();
+
+    res.json({ message: "Repayment successful", loan });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

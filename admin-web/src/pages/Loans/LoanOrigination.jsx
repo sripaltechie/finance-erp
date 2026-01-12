@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Wallet, ArrowRight, Check, Plus, Trash2, FileText, Percent } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // 1. For redirection
+import { Search, Wallet, ArrowRight, Check, Plus, Trash2, FileText, Percent,Loader } from 'lucide-react';
+
+// 2. Import Service & Hook
+import useAxios from '../../hooks/useAxios';
+import { createLoanService } from '../../services/loanService';
 
 const LoanOrigination = () => {
-  // --- MOCK DATA ---
+   const navigate = useNavigate(); // Navigation hook
+  const { loading, error, fetchData } = useAxios(); // API Hook
+
+  // --- MOCK DATA (Ideally fetch this from API too) ---
   const [wallets] = useState([
     { _id: 'w1', name: 'Main Cash Drawer', type: 'Cash', balance: 500000 },
     { _id: 'w2', name: 'HDFC Bank', type: 'Online', balance: 800000 },
@@ -103,11 +111,13 @@ const LoanOrigination = () => {
     setAdjustments(adjustments.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
-  const handleCreateLoan = () => {
+  const handleCreateLoan = async() => {
+     // 1. Basic Validation
     if (netDisbursement <= 0) return alert("Net Disbursement must be positive");
     if (paymentMode === 'Split' && !isSplitValid) return alert("Split amounts do not match Net Payout");
     if (!selectedBorrower) return alert("Please select a borrower");
 
+     // 2. Construct Payload
     const payload = {
         customerId: selectedBorrower._id,
         loanType,
@@ -132,18 +142,38 @@ const LoanOrigination = () => {
             rate: Number(interestRate)
         } : {},
         paymentMode: paymentMode === 'Single' 
-            ? { cash: 0, online: 0 } 
+            ? { cash: netDisbursement, online: 0 } // Simplified for single wallet
             : { cash: splitCashAmount, online: splitOnlineAmount }
     };
 
-    console.log("Submitting Loan Payload:", payload);
-    alert("Loan Payload Ready (Check Console)");
+    try {
+        // 3. Call Backend
+        const response = await fetchData(createLoanService, payload);        
+        // 4. Success Handling
+        alert("Loan Created Successfully!");     
+        // Redirect to the new Loan Details page
+        if (response.loan && response.loan._id) {
+            navigate(`/loans/${response.loan._id}`);
+        } else {
+            // Fallback if ID missing
+            navigate('/');
+        }
+    } catch (err) {
+        // Error is handled by hook, but we can log it
+        console.error("Creation Failed", err);
+    }
   };
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Create New Loan</h1>
+           {/* Global Error Message from Hook */}
+        {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <strong>Error: </strong> {error}
+            </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
@@ -224,7 +254,7 @@ const LoanOrigination = () => {
                             />
                         </div>
 
-                        {/* 🟢 UPDATED: Combined Interest UI */}
+                        {/* Combined Interest UI */}
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Interest Deduction</label>
                             <div className="border border-gray-300 rounded-lg p-1.5 flex items-center justify-between bg-white h-[54px]">
@@ -465,13 +495,21 @@ const LoanOrigination = () => {
 
                     <button 
                         onClick={handleCreateLoan}
-                        className="w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 flex items-center justify-center gap-2 transition transform active:scale-95"
+                        disabled={loading} // Disable while submitting
+                        className={`w-full py-4 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition transform active:scale-95 ${
+                            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-green-200'
+                        }`}
                     >
-                        Create Loan <ArrowRight size={20} />
+                          {loading ? (
+                            <>
+                                <Loader className="animate-spin" size={20} /> Creating Loan...
+                            </>
+                        ) : (
+                            <>Create Loan <ArrowRight size={20} /></>
+                        )}
                     </button>
                 </div>
             </div>
-
         </div>
       </div>
     </div>

@@ -12,6 +12,11 @@ const LoanSchema = new mongoose.Schema({
   // 💰 THE MONEY BREAKDOWN
   principalAmount: { type: Number, required: true }, // e.g., 10,000 (The "Chit Value")
   
+  // 🟢 NEW: Deduction Configuration (Toggles)
+  deductionConfig: {
+    interest: { type: Boolean, default: false } // true = Upfront Deduction, false = End/Collect Later
+  },
+
   // Deductions Logic (Upfront/End, Fixed/%)
   deductions: [{
     name: { type: String }, // e.g., "Document Fee"
@@ -37,6 +42,9 @@ const LoanSchema = new mongoose.Schema({
     onlineAmount: { type: Number, default: 0 },
     transactionRef: { type: String } // UPI Ref ID if any
   },
+
+  // 🟢 NEW: Notes / Terms
+  notes: { type: String, default: "" }, 
 
   // 🧠 CALCULATION RULES (Future-Proofing)
   rules: {

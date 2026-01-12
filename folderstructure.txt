@@ -1,3 +1,106 @@
+Folder Structure
+
+finance-erp/
+├── backend/            # Node.js + Express + MongoDB API
+├── admin-web/          # React.js + Vite (For Owner/Admin)
+└── collection-app/     # React Native + Expo (For Staff)
+
+
+finance-erp/
+├── backend/                        # Node.js + Express API [cite: 55]
+│   ├── src/
+│   │   ├── app.js                  # Express Entry Point [cite: 59]
+│   │   ├── config/
+│   │   │   └── db.js               # Database Connection [cite: 55]
+│   │   ├── controllers/            # Request Handlers [cite: 56]
+│   │   │   ├── authController.js
+│   │   │   ├── capitalController.js # Handles Branch Capital & Profits
+│   │   │   ├── companyController.js # Branch/Company Management
+│   │   │   ├── customerController.js
+│   │   │   ├── loanController.js    # Logic for Daily/Monthly Loans 
+│   │   │   ├── superAdminController.js # Client Approvals
+│   │   │   └── transactionController.js
+│   │   ├── jobs/
+│   │   │   └── nightlyPenalty.js   # Daily Interest/Penalty Cron 
+│   │   ├── middleware/
+│   │   │   ├── authMiddleware.js    # JWT verification [cite: 58]
+│   │   │   ├── errorMiddleware.js   # Centralized error handling [cite: 58]
+│   │   │   └── superAdminMiddleware.js # Restricts access to Super Admin routes
+│   │   ├── models/                 # Database Schemas [cite: 56]
+│   │   │   ├── Capital.js          # Tracks specific branch capital
+│   │   │   ├── Client.js           # SaaS Customer (Owner) [cite: 56]
+│   │   │   ├── Company.js          # Branch details & Settings [cite: 56]
+│   │   │   ├── Customer.js         # Level 1/2/3 categorization
+│   │   │   ├── Loan.js             # Logic for Daily Index & Monthly Balance
+│   │   │   ├── Reminder.js         # Today's Route Promises
+│   │   │   ├── SystemSettings.js   # Global SaaS Flags
+│   │   │   ├── Transaction.js      # Disbursement/Payment logs
+│   │   │   └── User.js             # Staff linked to Company [cite: 56]
+│   │   ├── routes/                 # API Endpoints [cite: 58]
+│   │   │   ├── apiRoutes.js        # Core functional routes
+│   │   │   ├── authRoutes.js       # Login & Registration [cite: 58]
+│   │   │   ├── capitalRoutes.js    # Capital management endpoints
+│   │   │   └── superAdminRoutes.js # Platform management endpoints
+│   │   └── services/               # Core Logic 
+│   │       ├── calculationService.js # Daily Index/Partial Calc Logic 
+│   │       ├── creditScoreService.js # Dynamic scoring 
+│   │       └── notificationService.js # SMS/WhatsApp Logic 
+│   └── .env                        # Environment Secrets [cite: 59]
+│
+├── admin-web/                      # React Admin Dashboard [cite: 55]
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── layout/
+│   │   │       └── Sidebar.jsx     # Main Navigation Wrapper [cite: 60]
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx     # Global User & Tenant State [cite: 61]
+│   │   ├── hooks/
+│   │   │   └── useAxios.js         # Company-aware API Instance [cite: 61]
+│   │   ├── pages/
+│   │   │   ├── Client/             # Client-Owner Screens
+│   │   │   │   ├── Capital.jsx     # Branch Capital Management
+│   │   │   │   └── CompanySetup.jsx # Branch Creation
+│   │   │   ├── Customers/          # Customer Management [cite: 60]
+│   │   │   │   ├── CustomerDetail.jsx
+│   │   │   │   └── CustomerList.jsx
+│   │   │   ├── Loans/              # Loan Lifecycle [cite: 60]
+│   │   │   │   ├── LoanDetails.jsx
+│   │   │   │   └── LoanOrigination.jsx
+│   │   │   └── SuperAdmin/         # Platform Owner Screens
+│   │   │       └── Dashboard.jsx   # Client Approval Tracking
+│   │   └── services/
+│   │       └── api.js              # Endpoint Definitions [cite: 61]
+│
+└── collection-app/                 # Expo Mobile App [cite: 55]
+    ├── app/                        # Expo Router Navigation [cite: 62]
+    │   ├── (auth)/                 # Registration/Login Flows [cite: 62]
+    │   │   ├── index.jsx
+    │   │   ├── register.jsx
+    │   │   └── _layout.jsx
+    │   ├── (tabs)/                 # Main Staff Tabs [cite: 62]
+    │   │   ├── collection.jsx      # Daily Route & Merged List [cite: 63]
+    │   │   ├── index.jsx           # Staff Dashboard [cite: 63]
+    │   │   ├── profile.jsx         # User Management
+    │   │   └── search.jsx          # Fast Customer Lookup
+    │   └── _layout.jsx             # Main App Layout [cite: 63]
+    ├── src/
+    │   ├── api/                    # Mobile API Integration [cite: 64]
+    │   │   ├── client.js
+    │   │   └── endpoints.js
+    │   ├── constants/
+    │   │   └── Colors.js           # Theme settings [cite: 65]
+    │   ├── context/
+    │   │   └── AuthContext.js      # Mobile Session Handling [cite: 64]
+    │   └── utils/
+    │       └── helpers.js          # Offline support & Formatters [cite: 65]
+
+Controller Logic (The "Scoped" Query)
+Instead of Loan.find(), you will ALWAYS write:
+// Safe Multi-Tenant Query
+const loans = await Loan.find({ 
+    companyId: req.companyId,  // <--- The magic filter
+    status: 'Active' 
+});
 
 
 
@@ -5,6 +108,8 @@
 
 
 
+
+old
 Folder Structure
 
 finance-erp/

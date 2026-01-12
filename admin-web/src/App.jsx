@@ -2,12 +2,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Capital from './pages/Client/Capital';
-import LoanOrigination from './pages/Client/LoanOrigination';
+import LoanOrigination from './pages/Loans/LoanOrigination';
 
 // Import Pages
 import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
 import CompanySetup from './pages/Client/CompanySetup';
 import StaffManagement from './pages/Client/StaffManagement';
+import RegisterScreen from '../../admin-web/src/pages/Auth/Register'
 
 // Mock User for Testing (Change role to test different views)
 const mockUser = { role: 'Super_Admin', name: 'Ramesh Gupta' };
@@ -27,6 +28,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* PUBLIC ROUTES */}
+        <Route path="/" element={<RegisterScreen/>} />
         <Route path="/login" element={<div>Login Page</div>} />
 
         {/* PROTECTED DASHBOARD ROUTES */}
