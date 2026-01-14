@@ -8,14 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Impo
 import { loginClientService } from '../../src/api/authService';
 
 export default function LoginScreen() {
-  const router = useRouter();
-  const [mobile, setMobile] = useState('');
-  const [password, setPassword] = useState('');
+ const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  // 🟢 Single State for Input
+  const [identifier, setIdentifier] = useState('7989704897'); 
+  const [password, setPassword] = useState('123456');
+    
   const handleLogin = async () => {
-    if (!mobile || !password) {
-      Alert.alert("Error", "Please enter Mobile & Password");
+    if (!identifier || !password) {
+            Alert.alert("Error", "fill all fields");
       return;
     }
     
@@ -23,12 +25,15 @@ export default function LoginScreen() {
 
     try {
       // 3. Call Backend
-      const data = await loginClientService({ mobile, password });
-
+      const data = await loginClientService({ identifier:identifier, password:password });
       // 4. Save Session (CRITICAL STEP)
-      await AsyncStorage.setItem('token', data.token); //
+      await AsyncStorage.setItem('token', data.token); //      
       await AsyncStorage.setItem('userInfo', JSON.stringify(data));
+      if (data && data.companyId) {
+        await AsyncStorage.setItem('activeCompanyId', data.companyId);
+      }
       // 🟢 NEW: Handle Company Selection
+      console.log("com_name",data);
       if (data.companies && data.companies.length > 0) {
         // Default to the first company for now
         // In a real app, you might show a "Select Branch" screen here
@@ -71,10 +76,10 @@ export default function LoginScreen() {
             <Smartphone size={20} color="#64748b" style={styles.icon} />
             <TextInput 
               style={styles.input}
-              placeholder="e.g. 9876543210"
-              keyboardType="phone-pad"
-              value={mobile}
-              onChangeText={setMobile}
+              placeholder="e.g. 9876543210  or user@email.com"
+              keyboardType="email-address"
+              value={identifier}
+              onChangeText={setIdentifier}
               autoCapitalize="none"
             />
           </View>

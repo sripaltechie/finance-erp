@@ -40,18 +40,31 @@ exports.registerClient = async (req, res) => {
 // @desc    Login Client (SaaS Owner)
 // @route   POST /api/auth/client/login
 exports.loginClient = async (req, res) => {
+  console.log("hiiii222");
   try {
-    const { email,mobile, password } = req.body;
+    const { identifier, password } = req.body;
      // 1. Check if client exists (Search by Email OR Mobile)
     // We construct a dynamic query
-    let query = {};
-    if (email) query.email = email;
-    if (mobile) query.mobile = mobile;
-    if (Object.keys(query).length === 0) {
-      return res.status(400).json({ message: "Please provide email or mobile" });
+    
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Please provide email/mobile and password" });
     }
 
-    const client = await Client.findOne(query); //
+    // let query = {};
+    // if (email) query.email = email;
+    // if (mobile) query.mobile = mobile;
+    // if (Object.keys(query).length === 0) {
+    //   return res.status(400).json({ message: "Please provide email or mobile" });
+    // }
+
+    console.log("client is");
+    const client = await Client.findOne({
+       $or: [
+        { email: identifier }, 
+        { mobile: identifier }
+      ]
+    }); //
+    console.log("client is",client);
     // 1. Check if client exists
     if (!client) {
       return res.status(400).json({ message: "User not found" });
@@ -74,13 +87,16 @@ exports.loginClient = async (req, res) => {
     const token = jwt.sign({ id: client._id, role: 'Client' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     // 🟢 5. FETCH COMPANIES OWNED BY THIS CLIENT
+    // const client = await Client.findOne(query); //
+    // const company = await Company.findOne({ clientId: client._id });
     const companies = await Company.find({ clientId: client._id }).select('_id name');
-
     res.json({
       _id: client._id,
       ownerName: client.ownerName,
+      businessName: client.businessName,
       token: token,
-      companies: companies, // <--- Send list so App can pick one
+      companies: companies || null, // <--- Send list so App can pick one
+      // companyId: company ? company._id : null
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

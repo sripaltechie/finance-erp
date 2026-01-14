@@ -34,7 +34,7 @@ const verifyClient = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized as Client Owner' });
     }
 
-    if (client.accountStatus !== 'Approved') {
+    if (client.accountStatus !== 'Active') {
       return res.status(403).json({ message: 'Account is not Approved yet.' });
     }
 

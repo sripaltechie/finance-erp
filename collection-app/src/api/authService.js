@@ -1,12 +1,12 @@
-import axios from 'axios';
+import client from './client';
 import { Config } from '../constants/Config';
 
 // 1. Create the instance
-const api = axios.create({
-  baseURL: Config.API_URL,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 10000, // Best practice: stop waiting after 10 seconds
-});
+// const api = axios.create({
+//   baseURL: Config.API_URL,
+//   headers: { 'Content-Type': 'application/json' },
+//   timeout: 10000, // Best practice: stop waiting after 10 seconds
+// });
 
 export const registerClientService = async (payload) => {
   try {
@@ -15,7 +15,7 @@ export const registerClientService = async (payload) => {
     // console.log("🚀 SENDING REQUEST TO:", fullUrl);
     // console.log("📦 PAYLOAD:", payload);
 
-    const response = await api.post('/auth/client/register', payload);
+    const response = await client.post('/auth/client/register', payload);
     
     // Axios successful responses are under 'data'
     return response.data; 

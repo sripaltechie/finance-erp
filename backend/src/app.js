@@ -30,6 +30,7 @@ const connectDB = async () => {
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const companyRoutes = require('./routes/companyRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const capitalRoutes = require('./routes/capitalRoutes'); // You need to create this similar to customerRoutes
 const transactionRoutes  = require('./routes/transactionRoutes');
@@ -39,6 +40,7 @@ const loanRoutes = require('./routes/loanRoutes');
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/companies', companyRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/capital', capitalRoutes); // New Capital Module
 app.use('/api/transactions', transactionRoutes)

@@ -81,8 +81,8 @@ exports.createCompany = async (req, res) => {
       address,
       settings: settings || {}, // Default settings if none provided
       capital : {
-        initial : Nummber(initialCapital) || 0,
-        current : Nummber(initialCapital) || 0,
+        initial : Number(initialCapital) || 0,
+        current : Number(initialCapital) || 0,
       }
     });
 

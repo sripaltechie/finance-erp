@@ -17,7 +17,7 @@ client.interceptors.request.use(
     try {
       // Retrieve token from phone storage
       const token = await AsyncStorage.getItem('token');
-      
+      console.log("🔑 Interceptor Token Check:", token ? "Token Found ✅" : "NO TOKEN FOUND ❌");
       // If token exists, attach it to the header
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -38,6 +38,7 @@ client.interceptors.response.use(
   async (error) => {
     if (error.response && error.response.status === 401) {
       // Token expired or invalid
+      console.log(error);
       console.log("Session expired. Logging out...");
       
       // Clear storage

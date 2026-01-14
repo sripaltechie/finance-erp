@@ -34,7 +34,16 @@ export default function Dashboard() {
       setStats(data);
       setIsPending(false); // If successful, user is Active
     } catch (error) {
-      console.log("Dashboard Fetch Error:", error.response.status);
+      console.log("Dashboard Fetch Error:", error);
+      const errorMessage = error.response?.data?.message || error.message;
+      if (errorMessage === "No Company Selected" || errorMessage.includes("companyId")) {
+      Alert.alert(
+          "Setup Required",
+          "You haven't selected a branch. Redirecting to setup...",
+          [{ text: "OK", onPress: () => router.replace('/company-setup') }]
+        );
+        return;
+      }
       // 🟢 DETECT PENDING STATUS (403)
       if (error.response && error.response.status === 403) {
         console.log("hi");
