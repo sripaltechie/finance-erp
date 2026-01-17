@@ -15,10 +15,14 @@ const UserSchema = new mongoose.Schema({
   
   role: { 
     type: String, 
-    enum: ['Admin', 'Collection_Boy', 'Recovery_Agent'], 
+    enum: ['Admin','Manager', 'Collection_Boy', 'Recovery_Agent'], 
     default: 'Collection_Boy' 
   },
-
+   // 🟢 NEW FIELD
+  permissions: [{
+    type: String,
+    enum: ['MANAGE_STAFF', 'APPROVE_LOAN', 'DELETE_CUSTOMER', 'VIEW_REPORTS'] 
+  }],
   // Security
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date },

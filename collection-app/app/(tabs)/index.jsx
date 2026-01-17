@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Alert
-} from 'react-native';
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Alert,StatusBar} from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
-  Wallet, TrendingUp, Users, AlertTriangle, PlusCircle, FileText, ArrowRight, Menu ,Lock
+  Wallet, TrendingUp, Users, AlertTriangle, PlusCircle, FileText, ArrowRight, Menu ,Lock,Search
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Sidebar from '../../src/components/Sidebar'
 
-// 🟢 1. Import Service (No direct Axios)
-import { getDashboardStatsService } from '../../src/api/capitalService';
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
+// 🟢 1. Import from UNIFIED API
+import { getDashboardStatsService } from '../../src/api/api'; // Changed path
 
 export default function Dashboard() {
-  const router = useRouter();
-  
+  const router = useRouter();  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isPending, setIsPending] = useState(false); // 🟢 New State for Pending Users
-  
+  const [isPending, setIsPending] = useState(false);
+  const [userData, setUserData] = useState(null);
+    const [sidebarVisible, setSidebarVisible] = useState(false);
   // Initial State
   const [stats, setStats] = useState({
     cashBalance: 0,
@@ -27,36 +27,40 @@ export default function Dashboard() {
     overdueAmount: 0
   });
 
-  // 🟢 2. Use Service in Function
+  // 🟢 2. Use Service
   const fetchStats = async () => {
     try {
-      const data = await getDashboardStatsService();
+      const companyId = await AsyncStorage.getItem('activeCompanyId');
+      const ownerInfoString = await AsyncStorage.getItem('userInfo');
+      if (ownerInfoString) {
+      const ownerInfo = JSON.parse(ownerInfoString);
+      setUserData(ownerInfo);
+      // Now you can access .user
+      // console.log("Owner Name:", ownerInfo.user?.companies); 
+    }
+    // 🛑 CRITICAL: Check if companyId is actually there
+    if (!companyId || companyId === 'undefined') { 
+      console.log("No Company ID found yet...");
+      return; // Stop the execution here
+    }
+    
+    // console.log("Fetching stats for Company ID:", companyId);
+      const data = await getDashboardStatsService(companyId);
       setStats(data);
-      setIsPending(false); // If successful, user is Active
+      setIsPending(false); 
     } catch (error) {
-      console.log("Dashboard Fetch Error:", error);
-      const errorMessage = error.response?.data?.message || error.message;
-      if (errorMessage === "No Company Selected" || errorMessage.includes("companyId")) {
-      Alert.alert(
-          "Setup Required",
-          "You haven't selected a branch. Redirecting to setup...",
-          [{ text: "OK", onPress: () => router.replace('/company-setup') }]
-        );
-        return;
+      // console.log("Dashboard Fetch Error:", error);
+      // Logic for redirect if no company selected is handled inside API service or here
+      if (typeof error === 'string' && (error === "No Company Selected" || error.includes("Company ID"))) {
+        Alert.alert(
+            "Setup Required",
+            "You haven't selected a branch. Redirecting to setup...",
+            [{ text: "OK", onPress: () => router.replace('/company-setup') }]
+          );
+          return;
       }
-      // 🟢 DETECT PENDING STATUS (403)
-      if (error.response && error.response.status === 403) {
-        console.log("hi");
-        setIsPending(true);
-      } else if (error.response && error.response.status === 401) {
-        // Token expired
-        router.replace('/login');
-      } else {
-        // Generic Error
-         Alert.alert("Connection Error", "Check your internet or IP address.");
-      }
-      // Optional: Show error to user
-      // Alert.alert("Error", "Could not load dashboard data.");
+      // Simple error handling
+      // Alert.alert("Connection Error", "Retrying...");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -71,8 +75,6 @@ export default function Dashboard() {
     setRefreshing(true);
     fetchStats();
   }, []);
-
-  
 
   const QuickAction = ({ icon: Icon, label, route, color }) => (
     <TouchableOpacity style={styles.actionBtn} onPress={() => router.push(route)}>
@@ -91,7 +93,6 @@ export default function Dashboard() {
     );
   }
 
-  // 🟢 RENDER PENDING SCREEN IF 403
   if (isPending) {
     return (
       <View style={styles.center}>
@@ -100,30 +101,37 @@ export default function Dashboard() {
         <Text style={styles.pendingSub}>
           Your account is waiting for admin approval. Please contact support.
         </Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
+       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      
+      {/* 🟢 SIDEBAR COMPONENT */}
+      <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
+      {/* HEADER WITH MENU BUTTON */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
+          {/* 🟢 Menu Button Triggers Sidebar */}
+           <TouchableOpacity onPress={() => setSidebarVisible(true)} style={styles.menuBtn}>
+            <Menu size={28} color="#0f172a" />
+          </TouchableOpacity>
+          <View>
           <Text style={styles.greeting}>Welcome Back,</Text>
-          <Text style={styles.ownerName}>Client Owner</Text> 
+           <Text style={styles.ownerName}>{userData?.user?.ownerName || " "}</Text> 
+          </View>
         </View>
+         {/* Profile Avatar (Optional Shortcut) */}
         <TouchableOpacity style={styles.profileBtn} onPress={() => router.push('/(tabs)/profile')}>
            <View style={styles.avatar}><Text style={styles.avatarText}>CO</Text></View>
         </TouchableOpacity>
       </View>
-
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+      {loading ? (
+              <View style={styles.center}><ActivityIndicator size="large" color="#0f172a" /></View>
+            ) : (
+      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         
         {/* TODAY'S COLLECTION CARD */}
         <View style={styles.mainCard}>
@@ -131,7 +139,7 @@ export default function Dashboard() {
               <Text style={styles.mainCardLabel}>Today's Collection</Text>
               <TrendingUp size={20} color="#fff" />
            </View>
-           <Text style={styles.mainCardValue}>₹ {stats.todayCollection.toLocaleString()}</Text>
+           <Text style={styles.mainCardValue}>₹ {(stats?.todayCollection ?? 0).toLocaleString()}</Text>
            <Text style={styles.mainCardSub}>Target: ₹ 50,000 (Mock)</Text>
         </View>
 
@@ -144,7 +152,7 @@ export default function Dashboard() {
                  <Wallet size={20} color="#0284c7" />
               </View>
               <Text style={styles.statLabel}>Cash In Hand</Text>
-              <Text style={styles.statValue}>₹{stats.cashBalance.toLocaleString()}</Text>
+              <Text style={styles.statValue}>₹{(stats?.cashBalance ?? 0).toLocaleString()}</Text>
            </View>
 
            {/* Bank Balance */}
@@ -153,7 +161,7 @@ export default function Dashboard() {
                  <Wallet size={20} color="#16a34a" />
               </View>
               <Text style={styles.statLabel}>Bank Balance</Text>
-              <Text style={styles.statValue}>₹{stats.bankBalance.toLocaleString()}</Text>
+              <Text style={styles.statValue}>₹{(stats?.bankBalance ?? 0).toLocaleString()}</Text>
            </View>
 
            {/* Active Loans */}
@@ -171,7 +179,7 @@ export default function Dashboard() {
                  <AlertTriangle size={20} color="#dc2626" />
               </View>
               <Text style={styles.statLabel}>Overdue Amt</Text>
-              <Text style={[styles.statValue, { color: '#dc2626' }]}>₹{stats.overdueAmount.toLocaleString()}</Text>
+              <Text style={[styles.statValue, { color: '#dc2626' }]}>₹{(stats?.overdueAmount ?? 0).toLocaleString()}</Text>
            </View>
         </View>
 
@@ -179,32 +187,14 @@ export default function Dashboard() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsRow}>
            <QuickAction icon={PlusCircle} label="New Loan" route="/loans/create" color="#2563eb" />
-           <QuickAction icon={Users} label="Add Customer" route="/customers/add" color="#059669" />
-           <QuickAction icon={FileText} label="Reports" route="/reports" color="#7c3aed" />
+           <QuickAction icon={Users} label="Add Customer" route="/customers/manage" color="#059669" />
+           <QuickAction icon={FileText} label="Reports" route="/staff/" color="#7c3aed" />
            <QuickAction icon={Menu} label="More" route="/(tabs)/profile" color="#475569" />
         </View>
 
-        {/* RECENT ACTIVITY (Mock) */}
-        <View style={styles.sectionHeader}>
-           <Text style={styles.sectionTitle}>Recent Activity</Text>
-           <TouchableOpacity><Text style={styles.linkText}>View All</Text></TouchableOpacity>
-        </View>
-        
-        {[1, 2, 3].map((i) => (
-           <View key={i} style={styles.activityItem}>
-              <View style={styles.activityIcon}>
-                 <ArrowRight size={16} color="#64748b" />
-              </View>
-              <View style={{ flex: 1 }}>
-                 <Text style={styles.activityText}>Collected ₹500 from Ramesh</Text>
-                 <Text style={styles.activityTime}>2 hours ago</Text>
-              </View>
-              <Text style={styles.activityAmount}>+₹500</Text>
-           </View>
-        ))}
-
         <View style={{ height: 100 }} /> 
       </ScrollView>
+      )}      
     </View>
   );
 }
@@ -238,18 +228,7 @@ const styles = StyleSheet.create({
   actionBtn: { alignItems: 'center', width: '22%' },
   actionIconBox: { width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   actionText: { fontSize: 11, color: '#475569', fontWeight: '600' },
-
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  linkText: { color: '#2563eb', fontSize: 14, fontWeight: '600' },
-
-  activityItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 10 },
-  activityIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  activityText: { fontSize: 14, fontWeight: '600', color: '#334155' },
-  activityTime: { fontSize: 12, color: '#94a3b8' },
-  activityAmount: { fontSize: 14, fontWeight: 'bold', color: '#16a34a' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f8fafc' },
   pendingTitle: { fontSize: 24, fontWeight: 'bold', color: '#0f172a', marginTop: 20 },
   pendingSub: { fontSize: 16, color: '#64748b', textAlign: 'center', marginTop: 10, marginBottom: 30 },
-  logoutBtn: { backgroundColor: '#ef4444', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 10 },
-  logoutText: { color: '#fff', fontWeight: 'bold' }
 });

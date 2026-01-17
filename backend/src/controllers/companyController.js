@@ -1,20 +1,133 @@
 const Company = require('../models/Company');
 const Client = require('../models/Client');
 const CapitalLog = require('../models/CapitalLog');
+const User = require('../models/User'); // Import User model
+const bcrypt = require('bcryptjs');
+
+
 
 // @desc    Create a new Company (Branch)
 // @route   POST /api/companies
+
+
+exports.createCompany = async (req, res) => {
+  try {
+    const { name, address,initialCapital, settings } = req.body;
+    const clientId = req.user.id; // From Auth Middleware
+
+    // 1. Check Subscription Limits
+    const client = await Client.findById(clientId);
+    const currentCompanyCount = await Company.countDocuments({ clientId });
+
+    let limit = 2; // Default (Basic)
+    if (client.subscriptionPlan === 'Pro') limit = 3;
+    if (client.subscriptionPlan === 'Enterprise') limit = 999;
+
+    if (currentCompanyCount >= limit) {
+      return res.status(403).json({ 
+        message: `Upgrade Plan! You reached the limit of ${limit} companies.` 
+      });
+    }
+
+    // 2. Create the Company
+    const newCompany = await Company.create({
+      clientId,
+      name,
+      address,
+      settings: settings || {}, // Default settings if none provided
+      capital : {
+        initial : Number(initialCapital) || 0,
+        current : Number(initialCapital) || 0,
+      }
+    });
+
+    // 3. Log Initial Capital
+    if (initialCapital > 0) {
+      await CapitalLog.create({
+        companyId: newCompany._id,
+        amount: Number(initialCapital),
+        type: 'Initial',
+        description: 'Opening Balance'
+      });
+    }
+
+    
+    // 🟢 4. AUTO-CREATE USER FOR OWNER (So they can login to Mobile App)
+    // Check if a user exists with the owner's mobile
+    const existingUser = await User.findOne({ mobile: client.mobile });    
+    if (!existingUser) {
+        // Hash the same password they used for Client Login (or a default one)
+        // For security, we usually ask them to set it, but here we reuse the Client password 
+        // Note: You can't decrypt the client hash, so we might need a default '123456' 
+        // or require them to register separately. 
+        // For User Experience, let's set a default pattern or copy if we had raw password (we don't).        
+        // Strategy: Set default password as their mobile number for first login
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(client.mobile, salt); // Default pass = mobile
+        await User.create({
+            companyId: newCompany._id,
+            name: client.ownerName + " (Owner)",
+            mobile: client.mobile,
+            password: hashedPassword,
+            role: 'Admin', // Full Access in App
+            isActive: true
+        });
+    }
+    res.status(201).json(newCompany);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get All Companies for the logged-in Client
+// @route   GET /api/companies
+exports.getMyCompanies = async (req, res) => {
+  try {
+    const companies = await Company.find({ clientId: req.user.id });
+    res.json(companies);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+// ==========================================
+
+// 🟢 PAYMENT MODE CRUD OPERATIONS
+
+// ==========================================
+
 // @desc    Add a New Payment Mode (Wallet)
 // @route   POST /api/companies/:id/payment-modes
 
+// @desc    Get All Payment Modes for a Company
+// @route   GET /api/companies/:companyId/payment-modes
+exports.getPaymentModes = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+        // Verify ownership (Client) or employment (User)
+        // Ideally checking permissions here
+        
+        const company = await Company.findById(companyId);
+        if (!company) return res.status(404).json({ message: "Company not found" });
+        
+        res.json(company.paymentModes);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Add a New Payment Mode
+// @route   POST /api/companies/:companyId/payment-modes
 exports.addPaymentMode = async (req, res) => {
   try {
-    const { id } = req.params; // Company ID
+    const { companyId  } = req.params; // Company ID
     const { name, type, initialBalance } = req.body;
     const clientId = req.user.id;
 
     // 1. Fetch Company & Client
-    const company = await Company.findOne({ _id: id, clientId });
+    const company = await Company.findOne({ _id: companyId, clientId });
     if (!company) return res.status(404).json({ message: "Company not found" });
 
     const client = await Client.findById(clientId);
@@ -22,7 +135,7 @@ exports.addPaymentMode = async (req, res) => {
     // 2. 🛡️ PLAN RESTRICTION LOGIC
     // Define Limits (You can move this to a config file later)
     const PLAN_LIMITS = {
-      'Basic': 2,    // e.g. 1 Cash + 1 Bank
+      'Basic': 3,    // e.g. 1 Cash + 1 Bank
       'Pro': 5,      // e.g. 2 Cash + 3 Banks
       'Enterprise': 99 // Unlimited
     };
@@ -55,60 +168,62 @@ exports.addPaymentMode = async (req, res) => {
 };
 
 
-exports.createCompany = async (req, res) => {
-  try {
-    const { name, address, settings,initialCapital } = req.body;
-    const clientId = req.user.id; // From Auth Middleware
+// @desc    Update Payment Mode (Name, Status)
+// @route   PUT /api/companies/:companyId/payment-modes/:modeId
+exports.updatePaymentMode = async (req, res) => {
+    try {
+        const { companyId, modeId } = req.params;
+        const { name, isActive } = req.body;
 
-    // 1. Check Subscription Limits
-    const client = await Client.findById(clientId);
-    const currentCompanyCount = await Company.countDocuments({ clientId });
+        const company = await Company.findById(companyId);
+        if (!company) return res.status(404).json({ message: "Company not found" });
 
-    let limit = 1; // Default (Basic)
-    if (client.subscriptionPlan === 'Pro') limit = 3;
-    if (client.subscriptionPlan === 'Enterprise') limit = 999;
+        const mode = company.paymentModes.id(modeId);
+        if (!mode) return res.status(404).json({ message: "Payment mode not found" });
 
-    if (currentCompanyCount >= limit) {
-      return res.status(403).json({ 
-        message: `Upgrade Plan! You reached the limit of ${limit} companies.` 
-      });
+        if (name) mode.name = name;
+        if (typeof isActive !== 'undefined') mode.isActive = isActive;
+
+        await company.save();
+        res.json(company.paymentModes);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-
-    // 2. Create the Company
-    const newCompany = await Company.create({
-      clientId,
-      name,
-      address,
-      settings: settings || {}, // Default settings if none provided
-      capital : {
-        initial : Number(initialCapital) || 0,
-        current : Number(initialCapital) || 0,
-      }
-    });
-
-    if (initialCapital > 0) {
-      await CapitalLog.create({
-        companyId: newCompany._id,
-        amount: Number(initialCapital),
-        type: 'Initial',
-        description: 'Opening Balance'
-      });
-    }
-
-    res.status(201).json(newCompany);
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 };
 
-// @desc    Get All Companies for the logged-in Client
-// @route   GET /api/companies
-exports.getMyCompanies = async (req, res) => {
-  try {
-    const companies = await Company.find({ clientId: req.user.id });
-    res.json(companies);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+// @desc    Delete Payment Mode (Soft Delete / Deactivate preferred if used)
+// @route   DELETE /api/companies/:companyId/payment-modes/:modeId
+exports.deletePaymentMode = async (req, res) => {
+    try {
+        const { companyId, modeId } = req.params;
+
+        const company = await Company.findById(companyId);
+        if (!company) return res.status(404).json({ message: "Company not found" });
+
+        // Logic: Only allow delete if currentBalance == initialBalance (unused)
+        // Otherwise, suggest deactivation.
+        const mode = company.paymentModes.id(modeId);
+        if(mode.currentBalance !== mode.initialBalance) {
+             return res.status(400).json({ message: "Cannot delete wallet with active transactions. Deactivate it instead." });
+        }
+
+        company.paymentModes.pull(modeId);
+        await company.save();
+        res.json(company.paymentModes);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+exports.checkAllowedLimitPm = async(req,res)=>{
+
+const currentModes = await PaymentMode.countDocuments({ companyId });
+const plan = PLANS.find(p => p.id === client.planId);
+
+  if (currentModes >= plan.limitations.maxPaymentModes) {
+    return res.status(403).json({ 
+      message: `Your ${plan.name} plan only allows ${plan.limitations.maxPaymentModes} payment modes. Please upgrade to Gold or Platinum.` 
+    });
   }
 };

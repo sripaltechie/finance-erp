@@ -22,14 +22,15 @@ const Sidebar = ({ user }) => {
       { path: '/super-admin/settings', label: 'Global Settings', icon: Settings },
     ],
     // 🏢 The Business Owner (Client)
-    Client_Admin: [
+    Client: [
       { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { path: '/client/companies', label: 'My Branches', icon: Building2 },
       { path: '/client/staff', label: 'Staff Management', icon: Users },
       { path: '/client/capital', label: 'Capital & Wallet', icon: Wallet },
       { path: '/customers', label: 'Customers', icon: UserCheck },
       { path: '/loans', label: 'Loan Management', icon: Banknote },
-    ],
+      { path: '/client/settings/payment-modes', label: 'Payment Modes', icon: Wallet}, 
+      ],
     // 👔 Branch Manager
     Manager: [
       { path: '/dashboard', label: 'Branch Dashboard', icon: LayoutDashboard },

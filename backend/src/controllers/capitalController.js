@@ -57,10 +57,9 @@ const getDashboardStats = async (req, res) => {
     try {
     // 🟢 1. GET COMPANY ID FROM QUERY PARAMS
     const { companyId } = req.query; 
-
-    if (!companyId) {
-      return res.status(400).json({ message: "Company ID is required" });
-    }
+    if (!companyId || companyId === 'undefined' || companyId.length !== 24) {
+      return res.status(400).json({ message: "A valid Company ID is required" });
+    }    
 
     // 🟢 2. SECURITY CHECK: Ensure this Client actually owns this Company
     // req.user.id comes from the Token (Client ID)

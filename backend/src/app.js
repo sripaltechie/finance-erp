@@ -35,16 +35,25 @@ const customerRoutes = require('./routes/customerRoutes');
 const capitalRoutes = require('./routes/capitalRoutes'); // You need to create this similar to customerRoutes
 const transactionRoutes  = require('./routes/transactionRoutes');
 const loanRoutes = require('./routes/loanRoutes');
+// 🟢 NEW ROUTES IMPORT
+const userRoutes = require('./routes/userRoutes');       // For Staff Management
+const superAdminRoutes = require('./routes/superAdminRoutes'); // For Super Admin
 
 // ... middlewares ...
 
 // Routes
 app.use('/api/auth', authRoutes);
+// app.use('/api/user', userRoutes);
+// app.use('/api/staff', userRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/capital', capitalRoutes); // New Capital Module
 app.use('/api/transactions', transactionRoutes)
 app.use('/api/loans', loanRoutes);
+
+// 🟢 NEW ROUTE MOUNTING
+app.use('/api/staff', userRoutes);             // Maps to /api/staff endpoints
+app.use('/api/super-admin', superAdminRoutes); // Maps to /api/super-admin endpoints
 // ... server listen ...
 
 // Base Route

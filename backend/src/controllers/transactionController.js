@@ -181,6 +181,9 @@ exports.createTransaction = async (req, res) => {
     // 6. CREATE TRANSACTION RECORD
     const newTxn = await Transaction.create([transactionData], { session });
 
+     // After creating transaction:
+    await recalculateLoanSummary(loanId, session);
+
     await session.commitTransaction();
     session.endSession();
 
@@ -226,4 +229,20 @@ exports.getTransactions = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+};
+
+
+// Helper Function (Put this at the bottom of the file)
+const recalculateLoanSummary = async (loanId, session) => {
+    const transactions = await Transaction.find({ loanId }).session(session);
+    
+    const totalPaid = transactions.reduce((sum, txn) => sum + txn.amount, 0);
+    
+    const loan = await Loan.findById(loanId).session(session);
+    loan.summary.amountPaid = totalPaid;
+    loan.summary.pendingBalance = loan.netDisbursement - totalPaid; // Or based on interest logic
+    
+    if (loan.summary.pendingBalance <= 0) loan.status = 'Closed';
+    
+    await loan.save({ session });
 };

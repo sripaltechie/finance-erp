@@ -37,7 +37,7 @@ const LoanOrigination = () => {
   const [totalDays, setTotalDays] = useState(100);
   
   // Monthly Specifics (Defaulted to 3%)
-  const [interestRate, setInterestRate] = useState(3);
+  const [interestRate, setInterestRate] = useState(5);
   
   // Interest Config (Upfront/End)
   const [interestConfig, setInterestConfig] = useState('End');

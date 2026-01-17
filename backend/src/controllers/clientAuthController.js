@@ -40,65 +40,50 @@ exports.registerClient = async (req, res) => {
 // @desc    Login Client (SaaS Owner)
 // @route   POST /api/auth/client/login
 exports.loginClient = async (req, res) => {
-  console.log("hiiii222");
   try {
     const { identifier, password } = req.body;
-     // 1. Check if client exists (Search by Email OR Mobile)
-    // We construct a dynamic query
-    
+
     if (!identifier || !password) {
-      return res.status(400).json({ message: "Please provide email/mobile and password" });
+      return res.status(400).json({ message: "Provide email/mobile and password" });
     }
 
-    // let query = {};
-    // if (email) query.email = email;
-    // if (mobile) query.mobile = mobile;
-    // if (Object.keys(query).length === 0) {
-    //   return res.status(400).json({ message: "Please provide email or mobile" });
-    // }
-
-    console.log("client is");
     const client = await Client.findOne({
-       $or: [
-        { email: identifier }, 
-        { mobile: identifier }
-      ]
-    }); //
-    console.log("client is",client);
-    // 1. Check if client exists
-    if (!client) {
-      return res.status(400).json({ message: "User not found" });
-    }
+      $or: [{ email: identifier }, { mobile: identifier }]
+    });
 
-    // 2. Check Password
+    if (!client) return res.status(400).json({ message: "User not found" });
+
     const isMatch = await bcrypt.compare(password, client.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid Credentials" });
-    }
+    if (!isMatch) return res.status(400).json({ message: "Invalid Credentials" });
 
-    // 3. CRITICAL: Check Approval Status
-    // If you just registered, your status is 'Pending'. You cannot login yet.
-    // For TESTING: You might want to manually change this to 'Active' in MongoDB Compass
-    if (client.accountStatus !== 'Active') {
+    // Ensure this matches your Model's enum
+    if (client.accountStatus !== 'Approved') {
       return res.status(403).json({ message: "Account Pending Approval" });
     }
-    
-    // 4. Generate Token
-    const token = jwt.sign({ id: client._id, role: 'Client' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    // 🟢 5. FETCH COMPANIES OWNED BY THIS CLIENT
-    // const client = await Client.findOne(query); //
-    // const company = await Company.findOne({ clientId: client._id });
+    // Generate Token
+    const token = jwt.sign(
+      { id: client._id, role: 'Client' }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '30d' }
+    );
+
+    // Fetch Companies
     const companies = await Company.find({ clientId: client._id }).select('_id name');
+
+    // SUCCESS RESPONSE
     res.json({
-      _id: client._id,
-      ownerName: client.ownerName,
-      businessName: client.businessName,
-      token: token,
-      companies: companies || null, // <--- Send list so App can pick one
-      // companyId: company ? company._id : null
+      token, // The interceptor will find this
+      user: {
+        _id: client._id,
+        ownerName: client.ownerName,
+        role: 'Client',
+        companies: companies || []
+      }
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Login Controller Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };

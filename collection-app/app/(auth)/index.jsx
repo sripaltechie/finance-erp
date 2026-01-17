@@ -10,6 +10,7 @@ import { loginClientService } from '../../src/api/authService';
 export default function LoginScreen() {
  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  
 
   // 🟢 Single State for Input
   const [identifier, setIdentifier] = useState('7989704897'); 
@@ -33,18 +34,32 @@ export default function LoginScreen() {
         await AsyncStorage.setItem('activeCompanyId', data.companyId);
       }
       // 🟢 NEW: Handle Company Selection
-      console.log("com_name",data);
-      if (data.companies && data.companies.length > 0) {
+      // console.log("com_name",data.user);
+      if (data.user.companies && data.user.companies.length > 0) {
         // Default to the first company for now
         // In a real app, you might show a "Select Branch" screen here
-        await AsyncStorage.setItem('activeCompanyId', data.companies[0]._id);
+        await AsyncStorage.setItem('activeCompanyId', data.user.companies[0]._id);
+        // 3. Show Alert and Navigate ON PRESS of "OK"
+      Alert.alert(
+        "Success", 
+        `Welcome back, ${data.user.ownerName || 'Owner'}`,
+        [
+          { 
+            text: "Go to Dashboard", 
+            onPress: () => router.replace('/(tabs)') // 🟢 Navigate here
+          }
+        ]
+      );
       } else {
-        Alert.alert("Notice", "No companies found. Please create a branch via Web Admin.");
+        Alert.alert(
+          "Notice", 
+          "No branches found. Please set up your company.",
+          [{ text: "OK", onPress: () => router.replace('/company-setup') }]
+        );
       }
       
       router.replace('/(tabs)');
       
-      Alert.alert("Success", "Welcome back, " + data.ownerName);
 
       // 5. Navigate to Dashboard (Tabs)
       // Note: We use replace to prevent going back to login

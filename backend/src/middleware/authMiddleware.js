@@ -34,7 +34,7 @@ const verifyClient = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized as Client Owner' });
     }
 
-    if (client.accountStatus !== 'Active') {
+    if (client.accountStatus !== 'Approved') {
       return res.status(403).json({ message: 'Account is not Approved yet.' });
     }
 
@@ -63,9 +63,15 @@ const verifyUser = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, no token' });
     }
 
+    // 🟢 Redirect logic: If the role is Client, hand off to verifyClient
+    if (decoded.role === 'Client') {
+      console.log("going to check client");
+      return verifyClient(req, res, next);
+    }
+
     // Check if this ID belongs to a STAFF member
     const user = await User.findById(decoded.id).select('-password');
-
+    
     if (!user) {
       return res.status(401).json({ message: 'Not authorized as Staff' });
     }
@@ -96,5 +102,13 @@ const verifyCompany = (req, res, next) => {
     
     next();
 };
+
+const can = (permission) => {
+    return (req, res, next) => {
+        if (req.user.permissions.includes(permission)) next();
+        else res.status(403).json({ message: "No Permission" });
+    }
+}
+// Usage: router.delete('/:id', verifyUser, can('DELETE_CUSTOMER'), deleteCustomer);
 
 module.exports = { verifyClient, verifyUser };

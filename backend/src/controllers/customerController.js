@@ -10,6 +10,14 @@ const createCustomer = async (req, res) => {
             incomeSource, incomeAmount, proofs, referredBy, collectionBoyId 
         } = req.body;
 
+        // 🟢 FIX: Get Company ID from the logged-in User (Staff)
+        console.log("passed all checks",req.body.companyId);
+        const companyId = req.body.companyId;
+        if (!companyId) {
+            return res.status(400).json({ message: "User is not linked to a company." });
+        }
+        console.log("passed all checks");
+
         const mobileExists = await Customer.findOne({ mobile });
         if (mobileExists) {
             return res.status(400).json({ message: 'Customer with this mobile already exists.' });
@@ -23,12 +31,12 @@ const createCustomer = async (req, res) => {
                 });
             }
         }
-
+        
         let referrerId = null;
         if (referredBy && referredBy !== '') referrerId = referredBy;
-
         // Create Customer
         const customer = await Customer.create({
+            companyId,
             fullName,
             mobile,
             locations,
@@ -81,6 +89,7 @@ const getCustomers = async (req, res) => {
 // @desc    Get Single Customer Detail
 // @route   GET /api/customers/:id
 const getCustomerById = async (req, res) => {
+    console.log("enter get customer id ctrl ");
     try {
         const customer = await Customer.findById(req.params.id).populate('referredBy', 'fullName mobile');
         if (!customer) return res.status(404).json({ message: 'Customer not found' });
@@ -120,6 +129,7 @@ const updateCustomer = async (req, res) => {
 // @desc    Check for Family/Ration Conflicts
 // @route   POST /api/customers/check-conflict
 const checkConflict = async (req, res) => {
+    console.log("entered check conflict");
     try {
         const { mobile, rationCardNumber } = req.body;
         let warnings = [];
