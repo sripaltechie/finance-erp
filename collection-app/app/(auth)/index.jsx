@@ -13,7 +13,7 @@ export default function LoginScreen() {
   
 
   // 🟢 Single State for Input
-  const [identifier, setIdentifier] = useState('7989704897'); 
+  const [identifier, setIdentifier] = useState('9000668609'); 
   const [password, setPassword] = useState('123456');
     
   const handleLogin = async () => {
@@ -67,7 +67,7 @@ export default function LoginScreen() {
 
     } catch (error) {
       console.error("Login Error:", error);
-      const msg = error.response?.data?.message || "Login Failed";
+      const msg = error.response?.data?.message || error.message || "Login Failed";
       Alert.alert("Error", msg);
     } finally {
       setLoading(false);

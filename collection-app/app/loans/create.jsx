@@ -5,12 +5,13 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
-  ChevronLeft, CheckCircle2, Wallet, CreditCard, Plus, Trash2
+  ChevronLeft, CheckCircle2, Wallet, CreditCard, Plus, Trash2,Banknote
 } from 'lucide-react-native';
 
 // Services
 import { createLoanService } from '../../src/api/loanService';
 import { getCustomerByIdService } from '../../src/api/customerService';
+import { getPaymentModesService } from '@/src/api/companyService';
 
 export default function CreateLoan() {
   const router = useRouter();
@@ -19,6 +20,10 @@ export default function CreateLoan() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [customer, setCustomer] = useState(null);
+
+  //Payment Modes Data
+  const [paymentModes,setPaymentModes] = useState([]);
+  const [selectedModeId,setSelectedModeId] = useState(''); //For single mode
 
   // --- FORM STATE ---
   const [loanType, setLoanType] = useState('Daily');
@@ -38,12 +43,12 @@ export default function CreateLoan() {
   const [gracePeriod, setGracePeriod] = useState('0');
 
   // Disbursement
-  const [disbursementMode, setDisbursementMode] = useState('Cash'); 
   const [isSplit, setIsSplit] = useState(false);
-  const [splitCash, setSplitCash] = useState('');
-  const [splitOnline, setSplitOnline] = useState('');
+   // For split: array of { modeId, amount }
+  // We initialize with available modes but 0 amount
+  const [splitAmounts, setSplitAmounts] = useState({}); 
 
-  // Additional Charges / Discounts
+    // Additional Charges / Discounts
   const [additionalCharges, setAdditionalCharges] = useState([]);
   const [newChargeName, setNewChargeName] = useState('');
   const [newChargeAmount, setNewChargeAmount] = useState('');
@@ -51,7 +56,7 @@ export default function CreateLoan() {
 
   const [notes, setNotes] = useState('');
 
-  // --- 1. LOAD CUSTOMER ---
+  // --- 1. LOAD Data ---
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
@@ -59,6 +64,15 @@ export default function CreateLoan() {
       try {
         const data = await getCustomerByIdService(customerId);
         if (isMounted) setCustomer(data);
+
+          // Fetch Payment Modes
+        const modesData = await getPaymentModesService();
+        if (isMounted) {
+            setPaymentModes(modesData);
+            if (modesData.length > 0) {
+                setSelectedModeId(modesData[0]._id); // Default to first
+            }
+        }
       } catch (err) {
         console.log("Fetch error:", err);
       } finally {
@@ -79,21 +93,25 @@ export default function CreateLoan() {
   }, [principal, duration, loanType]);
 
   // --- HANDLERS ---
-  const handlePrincipalChange = (text) => {
-    setPrincipal(text);
-    if (isSplit) {
-        setSplitCash(text);
-        setSplitOnline('0');
-    }
-  };
+    const handleSplitChange = (modeId, text) => {
+        setSplitAmounts(prev => ({ ...prev, [modeId]: text }));
+    };
 
-  const handleSplitToggle = (value) => {
-    setIsSplit(value);
-    if (value) {
-        setSplitCash(principal || '0');
-        setSplitOnline('0');
-    }
-  };
+    //   const handlePrincipalChange = (text) => {
+    //     setPrincipal(text);
+    //     if (isSplit) {
+    //         setSplitCash(text);
+    //         setSplitOnline('0');
+    //     }
+    //   };
+
+    //   const handleSplitToggle = (value) => {
+    //     setIsSplit(value);
+    //     if (value) {
+    //         setSplitCash(principal || '0');
+    //         setSplitOnline('0');
+    //     }
+    //   };
 
   const addCharge = () => {
     if (!newChargeName || !newChargeAmount) {
@@ -120,10 +138,14 @@ export default function CreateLoan() {
     if (!duration) return Alert.alert("Required", "Enter Duration");
 
     // Split Validation
+     const p = Number(principal);
+    let finalDisbursementMode = 'Cash'; // Default fallback
+    let finalPaymentSplit = null;
     if (isSplit) {
-        const c = Number(splitCash);
-        const o = Number(splitOnline);
-        const p = Number(principal);
+
+         // Calculate Total Split
+        let totalSplit = 0;
+        const splitArray = [];
         // Calculate Net Disbursement to validate against split if needed, 
         // but typically split must equal Principal or Net Disbursement depending on logic.
         // Assuming split equals Principal for simplicity here as backend handles deductions.
@@ -133,13 +155,48 @@ export default function CreateLoan() {
         // Actually, normally cash/online is what you GIVE. 
         // If interest is upfront, you give Principal - Interest.
         // For now, simple validation that they summed up something reasonable.
-        if (Math.abs((c + o) - p) > 500) { // Allow some variance if deductions involved? No, typically exact.
-             // If we want strict check:
-             // Alert.alert("Mismatch", `Split amounts (${c+o}) must match Principal (${p})`);
-             // return; 
+          Object.keys(splitAmounts).forEach(modeId => {
+            const amt = Number(splitAmounts[modeId]);
+                if (amt > 0) {
+                    totalSplit += amt;
+                    splitArray.push({ modeId, amount: amt });
+                }
+            });
+         if (totalSplit !== p) {
+             Alert.alert("Mismatch", `Split Total (${totalSplit}) must match Principal (${p})`);
+             return;
         }
-    }
+           finalDisbursementMode = 'Split';
+        // Construct the object structure backend expects for split
+        // Backend 'paymentSplit' is usually { cash: 0, online: 0 } or array depending on schema.
+        // Looking at your previous Loan model: 
+        // paymentSplit: { cash: { type: Number }, online: { type: Number } }
+        // BUT wait, if we use dynamic modes, we need to send an array or map based on new schema.
+        // Since we are changing to dynamic payment modes, we should check if backend accepts array.
+        // Assuming backend supports dynamic split if mode is 'Split'.
+        // If your backend strictly expects { cash: ..., online: ... }, we need to map dynamic modes to these categories.
+        
+        // Mapping dynamic modes to 'cash' and 'online' buckets for the existing backend schema:
+        let cashTotal = 0;
+        let onlineTotal = 0;
+        
+        splitArray.forEach(item => {
+            const mode = paymentModes.find(m => m._id === item.modeId);
+            if (mode?.type === 'Cash') cashTotal += item.amount;
+            else onlineTotal += item.amount;
+        });
+        
+        finalPaymentSplit = { cash: cashTotal, online: onlineTotal };
 
+    } else {
+        // Single Mode Logic
+        const mode = paymentModes.find(m => m._id === selectedModeId);
+        if (!mode) return Alert.alert("Error", "Select a payment mode");
+        
+        finalDisbursementMode = mode.type; // 'Cash' or 'Online'
+        // Even for single mode, backend might use paymentSplit structure for consistent accounting?
+        // Or createAdvancedLoan uses disbursementMode.
+    }
     setLoading(true);
 
     try {
@@ -156,15 +213,10 @@ export default function CreateLoan() {
         const payload = {
             customerId,
             loanType,
-            disbursementMode: isSplit ? 'Split' : disbursementMode, 
+            disbursementMode: disbursementMode, 
             
-            // Add split details if needed by backend (optional enhancement)
-            ...(isSplit && {
-                paymentSplit: {
-                    cash: Number(splitCash),
-                    online: Number(splitOnline)
-                }
-            }),
+             // Send split if applicable
+            ...(isSplit && { paymentSplit: finalPaymentSplit }),
             
             financials: {
                 principalAmount: Number(principal),
@@ -243,7 +295,7 @@ export default function CreateLoan() {
               style={styles.mainInput} 
               keyboardType="numeric" 
               placeholder="Principal Amount"
-              value={principal} onChangeText={handlePrincipalChange}
+              value={principal} onChangeText={setPrincipal}
           />
           <View style={styles.rowGrid}>
             <TextInput 
@@ -343,34 +395,41 @@ export default function CreateLoan() {
 
         {/* Mode */}
         <View style={styles.card}>
-            <Text style={styles.cardTitle}>Disbursement</Text>
+            <Text style={styles.cardTitle}>Disbursement Mode</Text>
             
             <View style={styles.switchRow}>
-                <Text style={styles.label}>Split Payment? (Cash + Online)</Text>
-                <Switch value={isSplit} onValueChange={handleSplitToggle} trackColor={{true: '#2563eb', false: '#cbd5e1'}} />
+                <Text style={styles.label}>Split Payment? </Text>
+                <Switch value={isSplit} onValueChange={setIsSplit} trackColor={{true: '#2563eb', false: '#cbd5e1'}} />
             </View>
 
             {!isSplit ? (
-                <View style={styles.toggleRow}>
-                    <TouchableOpacity style={[styles.modeBtn, disbursementMode === 'Cash' && styles.modeActive]} onPress={() => setDisbursementMode('Cash')}>
-                        <Wallet size={18} color={disbursementMode === 'Cash' ? '#fff' : '#64748b'} />
-                        <Text style={[styles.modeText, disbursementMode === 'Cash' && styles.textActive]}>Cash</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.modeBtn, disbursementMode === 'Online' && styles.modeActive]} onPress={() => setDisbursementMode('Online')}>
-                        <CreditCard size={18} color={disbursementMode === 'Online' ? '#fff' : '#64748b'} />
-                        <Text style={[styles.modeText, disbursementMode === 'Online' && styles.textActive]}>Online</Text>
-                    </TouchableOpacity>
+                 // Single Mode Selection
+                 <View style={styles.modeContainer}>
+                    {paymentModes.map(mode => (
+                        <TouchableOpacity 
+                            key={mode._id} 
+                            style={[styles.modeBtn, selectedModeId === mode._id && styles.modeActive]}
+                            onPress={() => setSelectedModeId(mode._id)}
+                        >
+                            {mode.type === 'Cash' ? <Banknote size={18} color={selectedModeId === mode._id ? '#fff' : '#64748b'} /> : <CreditCard size={18} color={selectedModeId === mode._id ? '#fff' : '#64748b'} />}
+                            <Text style={[styles.modeText, selectedModeId === mode._id && styles.textActive]}>{mode.name}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
             ) : (
                 <View style={styles.splitBox}>
-                    <View style={styles.splitInputGrp}>
-                        <Text style={styles.splitLabel}>Cash</Text>
-                        <TextInput style={styles.splitInput} value={splitCash} keyboardType="number-pad" onChangeText={setSplitCash} />
-                    </View>
-                    <View style={styles.splitInputGrp}>
-                        <Text style={styles.splitLabel}>Online</Text>
-                        <TextInput style={styles.splitInput} value={splitOnline} keyboardType="number-pad" onChangeText={setSplitOnline} />
-                    </View>
+                     {paymentModes.map(mode => (
+                        <View key={mode._id} style={styles.splitInputGrp}>
+                            <Text style={styles.splitLabel}>{mode.name} ({mode.type})</Text>
+                            <TextInput 
+                                style={styles.splitInput} 
+                                keyboardType="number-pad" 
+                                placeholder="0"
+                                value={splitAmounts[mode._id] || ''} 
+                                onChangeText={text => handleSplitChange(mode._id, text)} 
+                            />
+                        </View>
+                    ))}
                 </View>
             )}
         </View>
@@ -411,13 +470,14 @@ const styles = StyleSheet.create({
   
   // Split Styles
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  toggleRow: { flexDirection: 'row', gap: 10 },
-  modeBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
+  modeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  modeBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8 },
+    modeBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
   modeActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
   modeText: { fontWeight: 'bold', color: '#64748b' },
   textActive: { color: '#fff' },
-  splitBox: { flexDirection: 'row', gap: 10 },
-  splitInputGrp: { flex: 1 },
+  splitBox: { gap: 10 },
+  splitInputGrp: { marginBottom: 8 },
   splitLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
   splitInput: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, padding: 10, fontSize: 16, fontWeight: 'bold' },
 

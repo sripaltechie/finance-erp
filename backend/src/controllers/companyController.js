@@ -24,8 +24,14 @@ exports.createCompany = async (req, res) => {
     // 2. 🛡️ CHECK PLAN LIMITS
     const currentCompanyCount = await Company.countDocuments({ clientId });
      // Default to 'Basic' if plan is missing or invalid
-    const userPlan = client.subscriptionPlan || 'Basic';
-    const limits = PLAN_LIMITS[userPlan] || PLAN_LIMITS['Basic'];
+    const userPlan = client.subscriptionPlan || 'silver';
+
+    // Locate the specific plan object in your shared array
+    const planDetails = PLANS.find(p => p.id === userPlan.toLowerCase()) || PLANS[0];
+
+    // 4. Extract limitations
+    console.log(planDetails);
+    const limits = planDetails.limitations;
     
     if (currentCompanyCount >= limits.maxCompanies) {
       return res.status(403).json({ 
@@ -135,19 +141,21 @@ exports.addPaymentMode = async (req, res) => {
     if (!company) return res.status(404).json({ message: "Company not found" });
 
     const client = await Client.findById(clientId);
-
-    // 2. 🛡️ PLAN RESTRICTION LOGIC
-    // Define Limits (You can move this to a config file later)
-    const PLAN_LIMITS = {
-      'Basic': 3,    // e.g. 1 Cash + 1 Bank
-      'Pro': 5,      // e.g. 2 Cash + 3 Banks
-      'Enterprise': 99 // Unlimited
-    };
-
+    console.log("sripal",client);
+    // 2. 🛡️ CHECK PLAN LIMITS
+    console.log("currentPymtCount");
     const currentCount = company.paymentModes.length;
-    const allowedLimit = PLAN_LIMITS[client.subscriptionPlan] || 2;
+     // Default to 'Basic' if plan is missing or invalid
+    const userPlan = client.subscriptionPlan || 'silver';
 
-    if (currentCount >= allowedLimit) {
+    // Locate the specific plan object in your shared array
+    const planDetails = PLANS.find(p => p.id === userPlan.toLowerCase()) || PLANS[0];
+
+    // 4. Extract limitations
+    console.log("planDetails",planDetails);
+    const limits = planDetails.limitations;
+    
+    if (currentCount >= limits.maxPaymentModes) {
       return res.status(403).json({ 
         message: `Plan Limit Reached! Your ${client.subscriptionPlan} plan allows max ${allowedLimit} payment modes. Upgrade to add more.` 
       });

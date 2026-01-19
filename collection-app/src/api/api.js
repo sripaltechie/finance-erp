@@ -22,7 +22,6 @@ API.interceptors.request.use(
       const staff = staffData ? JSON.parse(staffData) : null;
       // console.log(user);
     const token = user?.token || staff?.token;
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,6 +40,7 @@ API.interceptors.response.use(
       // localStorage.removeItem('user');
       // window.location.href = '/login';
     }
+    console.log("apijs error",error);
     return Promise.reject(error.response?.data?.message || 'Something went wrong');
   }
 );
