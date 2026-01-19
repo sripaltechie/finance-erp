@@ -99,6 +99,7 @@ export default function Sidebar({ visible, onClose }) {
                 <Text style={styles.sectionLabel}>ADMIN CONTROLS</Text>
                 <MenuItem icon={Users} label="Manage Staff" onPress={() => navigateTo('/staff')} />
                 <MenuItem icon={Wallet} label="Company Setup" onPress={() => navigateTo('/company-setup')} />
+                <MenuItem icon={Wallet} label="Payment Modes" onPress={() => navigateTo('/payment-modes')} />
               </>
             )}
 

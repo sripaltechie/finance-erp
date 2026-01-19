@@ -1,0 +1,42 @@
+graph TD
+%% Nodes
+Start([User Starts App])
+Register[Register Account]
+DB_Pending[Database: Account Status = 'Pending']
+Admin_Action{Admin Approves?}
+DB_Active[Database: Account Status = 'Active']
+Login[Login Screen]
+Login_Auth{Valid Credentials?}
+Status_Check{Account Active?}
+Company_Check{Has Company?}
+
+Setup_Screen[Company Setup Screen]
+Setup_Action[Create Branch & Capital]
+
+Dashboard[Main Dashboard / Tabs]
+
+%% Flows
+Start --> Register
+Register --> DB_Pending
+DB_Pending --> Admin_Action
+Admin_Action -- No --> DB_Pending
+Admin_Action -- Yes --> DB_Active
+
+DB_Active --> Login
+Login --> Login_Auth
+Login_Auth -- No --> Login
+Login_Auth -- Yes --> Status_Check
+
+Status_Check -- No (403) --> Login
+Status_Check -- Yes --> Company_Check
+
+Company_Check -- No (companyId: null) --> Setup_Screen
+Company_Check -- Yes (companyId: exists) --> Dashboard
+
+Setup_Screen --> Setup_Action
+Setup_Action --> Dashboard
+
+%% Styling
+style Start fill:#f9f,stroke:#333,stroke-width:2px
+style Dashboard fill:#9f9,stroke:#333,stroke-width:2px
+style Setup_Screen fill:#ff9,stroke:#333,stroke-width:2px

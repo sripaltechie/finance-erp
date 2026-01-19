@@ -3,7 +3,8 @@ const Client = require('../models/Client');
 const CapitalLog = require('../models/CapitalLog');
 const User = require('../models/User'); // Import User model
 const bcrypt = require('bcryptjs');
-
+// import { PLATFORMS, DURATIONS, BASE_PRICES, PLANS } from '../../../shared/PricingData';
+const { PLATFORMS, DURATIONS, BASE_PRICES, PLANS } = require('../../../shared/PricingData');
 
 
 // @desc    Create a new Company (Branch)
@@ -15,21 +16,24 @@ exports.createCompany = async (req, res) => {
     const { name, address,initialCapital, settings } = req.body;
     const clientId = req.user.id; // From Auth Middleware
 
-    // 1. Check Subscription Limits
+    // 1. Fetch Client to check Plan
     const client = await Client.findById(clientId);
+    if (!client) return res.status(404).json({ message: "Client not found" });
+    
+    
+    // 2. 🛡️ CHECK PLAN LIMITS
     const currentCompanyCount = await Company.countDocuments({ clientId });
-
-    let limit = 2; // Default (Basic)
-    if (client.subscriptionPlan === 'Pro') limit = 3;
-    if (client.subscriptionPlan === 'Enterprise') limit = 999;
-
-    if (currentCompanyCount >= limit) {
+     // Default to 'Basic' if plan is missing or invalid
+    const userPlan = client.subscriptionPlan || 'Basic';
+    const limits = PLAN_LIMITS[userPlan] || PLAN_LIMITS['Basic'];
+    
+    if (currentCompanyCount >= limits.maxCompanies) {
       return res.status(403).json({ 
-        message: `Upgrade Plan! You reached the limit of ${limit} companies.` 
+        message: `Plan Limit Reached! Your ${userPlan} plan allows max ${limits.maxCompanies} companies. Upgrade to add more.` 
       });
     }
 
-    // 2. Create the Company
+    // 3. Create the Company
     const newCompany = await Company.create({
       clientId,
       name,
@@ -41,7 +45,7 @@ exports.createCompany = async (req, res) => {
       }
     });
 
-    // 3. Log Initial Capital
+    // 4. Log Initial Capital
     if (initialCapital > 0) {
       await CapitalLog.create({
         companyId: newCompany._id,
@@ -52,7 +56,7 @@ exports.createCompany = async (req, res) => {
     }
 
     
-    // 🟢 4. AUTO-CREATE USER FOR OWNER (So they can login to Mobile App)
+    // 🟢 5. AUTO-CREATE USER FOR OWNER (So they can login to Mobile App)
     // Check if a user exists with the owner's mobile
     const existingUser = await User.findOne({ mobile: client.mobile });    
     if (!existingUser) {
@@ -173,15 +177,30 @@ exports.addPaymentMode = async (req, res) => {
 exports.updatePaymentMode = async (req, res) => {
     try {
         const { companyId, modeId } = req.params;
-        const { name, isActive } = req.body;
+        const { name, type, initialBalance, isActive } = req.body;
 
         const company = await Company.findById(companyId);
+        // console.log("company",company);
         if (!company) return res.status(404).json({ message: "Company not found" });
 
         const mode = company.paymentModes.id(modeId);
+        // console.log("modeid",mode);
         if (!mode) return res.status(404).json({ message: "Payment mode not found" });
 
         if (name) mode.name = name;
+        if (type) mode.type = type;
+        
+        // Note: Updating initialBalance might cause discrepancies if transactions exist based on old balance.
+        // The frontend warns about this, but backend allows it here as requested.
+        if (initialBalance !== undefined) {
+             // If balance logic depends on initial + transactions, changing initial changes current.
+             // Simple adjustment: 
+             // New Current = Old Current - Old Initial + New Initial
+             const diff = Number(initialBalance) - mode.initialBalance;
+             mode.initialBalance = Number(initialBalance);
+             mode.currentBalance += diff; 
+        }
+
         if (typeof isActive !== 'undefined') mode.isActive = isActive;
 
         await company.save();
@@ -190,6 +209,7 @@ exports.updatePaymentMode = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 // @desc    Delete Payment Mode (Soft Delete / Deactivate preferred if used)
 // @route   DELETE /api/companies/:companyId/payment-modes/:modeId

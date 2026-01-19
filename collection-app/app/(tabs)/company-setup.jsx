@@ -10,6 +10,7 @@ import { createCompanyService } from '../../src/api/companyService';
 export default function CompanySetupScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Form State matching Web App
   const [formData, setFormData] = useState({
@@ -22,6 +23,7 @@ export default function CompanySetupScreen() {
   });
 
   const handleCreate = async () => {
+     setErrorMsg(''); // Reset error
     // 1. Basic Validation
     if (!formData.name || !formData.address || !formData.initialCapital) {
       Alert.alert("Missing Fields", "Please fill in Name, Address and Initial Capital.");
@@ -57,7 +59,12 @@ export default function CompanySetupScreen() {
     } catch (error) {
       console.log("srip",error);
       const msg = error.response?.data?.message || "Failed to create branch";
-      Alert.alert("Error", msg);
+      setErrorMsg(msg);
+       if (msg.includes("Plan Limit")) {
+        Alert.alert("Upgrade Required", msg);
+      } else {
+        Alert.alert("Error", msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -204,6 +211,9 @@ const styles = StyleSheet.create({
   iconBg: { width: 64, height: 64, backgroundColor: '#dbeafe', borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#0f172a', marginBottom: 8 },
   subtitle: { fontSize: 14, color: '#64748b', textAlign: 'center' },
+
+  rrorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef2f2', padding: 12, margin: 20, marginBottom: 0, borderRadius: 8, borderWidth: 1, borderColor: '#fecaca' },
+  errorText: { color: '#b91c1c', marginLeft: 10, fontSize: 13, flex: 1 },
 
   formSection: { marginBottom: 24 },
   inputGroup: { marginBottom: 20 },

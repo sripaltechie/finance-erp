@@ -22,6 +22,7 @@ const decodeToken = (req) => {
 */
 const verifyClient = async (req, res, next) => {
   try {
+    console.log("entered verclient");
     const decoded = decodeToken(req);
     if (!decoded) {
       return res.status(401).json({ message: 'Not authorized, no token' });
@@ -37,11 +38,12 @@ const verifyClient = async (req, res, next) => {
     if (client.accountStatus !== 'Approved') {
       return res.status(403).json({ message: 'Account is not Approved yet.' });
     }
-
+    
     // Attach Client to Request
     req.user = client; 
     // We don't attach companyId here because a Client can own MANY companies.
     // They will send companyId in the request body/params.
+    console.log("success client");
     
     next();
   } catch (error) {
