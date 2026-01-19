@@ -20,11 +20,21 @@ export const loginClientService = async (payload) => {
         return response.data;
     } catch (error) {
       // console.log("hitvhi ",error);
+        // if (error.response) {
+        //     throw error.response.data?.message || "Login Failed"; 
+        // } else {
+        //     throw new Error("Network Error");
+        // }
         if (error.response) {
-            throw error.response.data?.message || "Login Failed"; 
+          console.error("❌ Backend Error:", error.response.data);
+          throw error.response.data;
+        } else if (error.request) { // ✅ Change 'request' to 'error.request'
+          console.error("❌ Network Error: No response received from", Config.API_URL);
+          throw new Error("Server not responding. Check if Backend is running.");
         } else {
-            throw new Error("Network Error");
-        }
+          console.error("❌ Request Error:", error.message);
+          throw error;
+      }
     }
 };
 
