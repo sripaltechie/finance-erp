@@ -141,7 +141,7 @@ exports.addPaymentMode = async (req, res) => {
     if (!company) return res.status(404).json({ message: "Company not found" });
 
     const client = await Client.findById(clientId);
-    console.log("sripal",client);
+    // console.log("sripal",client);
     // 2. 🛡️ CHECK PLAN LIMITS
     console.log("currentPymtCount");
     const currentCount = company.paymentModes.length;

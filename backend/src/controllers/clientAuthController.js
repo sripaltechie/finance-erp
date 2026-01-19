@@ -52,7 +52,7 @@ exports.loginClient = async (req, res) => {
       $or: [{ email: identifier }, { mobile: identifier }]
     });
     console.log("sripal",client);
-    if (!client) return res.status(400).json({ message: "User not found" });
+    if (!client) return res.status(401).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, client.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid Credentials" });

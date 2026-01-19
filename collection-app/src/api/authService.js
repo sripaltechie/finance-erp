@@ -32,7 +32,8 @@ export const loginClientService = async (payload) => {
           console.error("❌ Network Error: No response received from", Config.API_URL);
           throw new Error("Server not responding. Check if Backend is running.");
         } else {
-          console.error("❌ Request Error:", error.message,error);
+          console.log("full error",error);
+          console.error("❌ Request Error:", error);
           throw error;
       }
     }

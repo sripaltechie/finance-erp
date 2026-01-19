@@ -66,9 +66,16 @@ export default function LoginScreen() {
       router.replace('/(tabs)'); 
 
     } catch (error) {
-      console.error("Login Error:", error);
-      const msg = error.response?.data?.message || error.message || "Login Failed";
-      Alert.alert("Error", msg);
+      console.log(error);
+      // const msg = error.response?.data?.message || error.message || "Login Failed";
+      // Alert.alert("Error", msg);
+      if (error.response && error.response.status === 401) {
+        Alert.alert("Login Failed", "No account found with this mobile number.");
+    } else if (error.response && error.response.status === 403) {
+        Alert.alert("Error", "User Approval Pending. Contact Admin.");
+    } else {
+        Alert.alert("Error", "Something went wrong. Try again.");
+    }
     } finally {
       setLoading(false);
     }

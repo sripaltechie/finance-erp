@@ -87,6 +87,7 @@ export default function PaymentModesScreen() {
       setModalVisible(false);
       loadModes(); // Refresh list
     } catch (error) {
+      console.log("new err",error);
       Alert.alert("Error", error.response?.data?.message || "Operation failed");
     } finally {
       setSubmitting(false);
