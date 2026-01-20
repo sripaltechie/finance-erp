@@ -47,11 +47,11 @@ exports.loginClient = async (req, res) => {
       return res.status(400).json({ message: "Provide email/mobile and password" });
     }
 
-    console.log("sripal",identifier,password);
+    // fe.log("sripal",identifier,password);
     const client = await Client.findOne({
       $or: [{ email: identifier }, { mobile: identifier }]
     });
-    console.log("sripal",client);
+    // console.log("sripal",client);
     if (!client) return res.status(401).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, client.password);
