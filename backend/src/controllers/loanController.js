@@ -28,7 +28,7 @@ exports.createAdvancedLoan = async (req, res) => {
         const customer = await Customer.findById(customerId).session(session);
         if (!customer) return res.status(404).json({ message: 'Customer not found' });
 
-        // 2. Calculate Deductions
+        // 2. Calculate Deductions & Net Disbursement
         let upfrontDeductions = 0;
         const principal = Number(financials.principalAmount);
         const rate = Number(financials.interestRate);
@@ -62,6 +62,14 @@ exports.createAdvancedLoan = async (req, res) => {
             });
         }
 
+         // Check for specific fields if they persist in some versions of frontend
+        if (financials.deductionConfig?.adminCommission === 'Upfront') {
+             upfrontDeductions += Number(financials.adminCommission?.amount || 0);
+        }
+        if (financials.deductionConfig?.staffCommission === 'Upfront') {
+             upfrontDeductions += Number(financials.staffCommission?.amount || 0);
+        }
+
         const netDisbursement = principal - upfrontDeductions;
 
         // 3. Check Company Capital 
@@ -74,7 +82,7 @@ exports.createAdvancedLoan = async (req, res) => {
         if (disbursementMode === 'Split' && paymentSplit) {
             // Case A: Dynamic Split (Object or Array)
             // If paymentSplit is { cash: 100, online: 200 } (Legacy/Simple)
-            if (paymentSplit.cash || paymentSplit.online) {
+            if (paymentSplit && typeof paymentSplit === 'object') {
                  // Try to map 'cash' and 'online' to actual modes if possible, or store loosely
                  // For now, let's assume the frontend sends modeIds as keys if using dynamic modes
                  // If the frontend is sending { cash: ..., online: ... }, we might need default modes.
@@ -86,20 +94,29 @@ exports.createAdvancedLoan = async (req, res) => {
                 const amount = Number(val);
                 if (amount > 0) {
                     // Check if key is a valid Mode ID in company
-                    const mode = company.paymentModes.id(key);
+                    // Or if it's 'cash'/'online' mapping to a mode
+                    let mode = company.paymentModes.id(key);
+                     // Fallback: if key is 'cash' or 'online', find the first matching active mode
+                    if (!mode && (key === 'cash' || key === 'online')) {
+                         const type = key.charAt(0).toUpperCase() + key.slice(1); // 'Cash' or 'Online'
+                         mode = company.paymentModes.find(m => m.type === type && m.isActive);
+                    }
+
                     if (mode) {
                         if (mode.currentBalance < amount) {
                             throw new Error(`Insufficient funds in ${mode.name}. Bal: ${mode.currentBalance}`);
                         }
                         mode.currentBalance -= amount;
-                        finalPaymentSplit.push({ modeId: key, amount });
+                        finalPaymentSplit.push({ modeId: mode._id, amount });
                     } else {
                         // Fallback for 'cash'/'online' keys if simple logic still used
                         // Ignore or handle if needed
                     }
                 }
             }
-        } else {
+        } 
+        // If finalPaymentSplit is empty, maybe it's Single Mode
+        if (finalPaymentSplit.length === 0 && disbursementMode !== 'Split') {
             // Case B: Single Mode
             // disbursementMode might be 'Cash', 'Online' OR a specific Mode ID
             // Ideally frontend should send mode ID if it's dynamic
@@ -108,6 +125,7 @@ exports.createAdvancedLoan = async (req, res) => {
             
             // Check if disbursementMode is an ID
             let mode = company.paymentModes.id(disbursementMode);
+              // Or 'Cash'/'Online' string
             
             if (!mode) {
                 // Try finding by type if ID not sent
@@ -121,8 +139,8 @@ exports.createAdvancedLoan = async (req, res) => {
                 mode.currentBalance -= netDisbursement;
                 finalPaymentSplit.push({ modeId: mode._id, amount: netDisbursement });
             } else {
-                // If no mode found, we allow creation but log warning/error? 
-                // Creating without capital deduction breaks accounting.
+                // If no mode found (and we need to deduct capital), throw error
+                // Unless we allow creation without deduction (not recommended)
                 throw new Error(`Invalid Disbursement Mode: ${disbursementMode}`);
             }
         }
@@ -144,7 +162,23 @@ exports.createAdvancedLoan = async (req, res) => {
             customerId,
             loanType,
             loanType,
-            disbursementMode: disbursementMode === 'Split' ? 'Split' : 'Single',
+            disbursementMode: finalPaymentSplit.length > 1 ? 'Split' : (disbursementMode || 'Cash'),
+             // Map our calculated split array to the schema's paymentSplit
+            // Note: Schema expects { cash: number, online: number } in previous version
+            // BUT we updated it to array in recent steps or need to map it back if schema is old.
+            // Assuming Schema is updated to support dynamic split or we map it to old fields roughly.
+            // Let's use the flexible `paymentSplit` if schema allows, otherwise map to cash/online buckets.
+            paymentSplit: {
+                cash: finalPaymentSplit.filter(s => {
+                    const m = company.paymentModes.id(s.modeId); 
+                    return m && m.type === 'Cash';
+                }).reduce((a, b) => a + b.amount, 0),
+                online: finalPaymentSplit.filter(s => {
+                    const m = company.paymentModes.id(s.modeId); 
+                    return m && m.type === 'Online';
+                }).reduce((a, b) => a + b.amount, 0)
+            },
+
             // Store the detailed split array instead of simple cash/online object
             // This requires Loan Schema update to accept array if not already
             // If schema expects object { cash, online }, we might need to map it back or update schema.
@@ -172,7 +206,7 @@ exports.createAdvancedLoan = async (req, res) => {
             // Storing in a temporary field or notes if schema is rigid, 
             // but ideally Loan Schema should have `transactions` or `disbursementDetails`
             disbursementDetails: finalPaymentSplit 
-        }), { session });
+        }, { session });
 
         // 5. Log Capital Entry
         await CapitalLog.create([{
@@ -189,6 +223,8 @@ exports.createAdvancedLoan = async (req, res) => {
         res.status(201).json(newLoan[0]);
 
     } catch (error) {
+          await session.abortTransaction();
+        session.endSession();
         console.error("Create Loan Error:", error);
         res.status(500).json({ message: error.message });
     }
