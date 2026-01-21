@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo} from 'react';
 import { 
   StyleSheet, Text, View, TextInput, TouchableOpacity, 
   ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Switch
@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
   ChevronLeft, CheckCircle2, Wallet, CreditCard, Plus, Trash2,Banknote
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Services
 import { createLoanService } from '../../src/api/loanService';
@@ -22,8 +23,8 @@ export default function CreateLoan() {
   const [customer, setCustomer] = useState(null);
 
   //Payment Modes Data
-  const [paymentModes,setPaymentModes] = useState([]);
-  const [selectedModeId,setSelectedModeId] = useState(''); //For single mode
+  const [paymentModes, setPaymentModes] = useState([]);
+  const [selectedModeId, setSelectedModeId] = useState(''); //For single mode
 
   // --- FORM STATE ---
   const [loanType, setLoanType] = useState('Daily');
@@ -31,10 +32,12 @@ export default function CreateLoan() {
   
   // Financials
   const [duration, setDuration] = useState('100'); // Days
-  const [rate, setRate] = useState('3'); // Interest %
+  const [interestType, setInterestType] = useState('Percentage'); // 'Percentage' or 'Fixed'
+  const [rate, setRate] = useState('5'); // Interest %
+  const [fixedInterest, setFixedInterest] = useState(''); // For Fixed Amount
   const [installment, setInstallment] = useState(''); // Auto-calc
   
-  // Deduction Toggles (Only Interest as per your file)
+  // Deduction Toggles 
   const [interestUpfront, setInterestUpfront] = useState(false);
   
   // Penalty Config
@@ -60,10 +63,13 @@ export default function CreateLoan() {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      if (!customerId) { setFetching(false); return; }
-      try {
-        const data = await getCustomerByIdService(customerId);
-        if (isMounted) setCustomer(data);
+        try {
+          if (customerId) {              
+            const custData = await getCustomerByIdService(customerId);
+            if (isMounted) setCustomer(custData);
+          }
+        // const data = await getCustomerByIdService(customerId);
+        // if (isMounted) setCustomer(data);
 
           // Fetch Payment Modes
         const modesData = await getPaymentModesService();
@@ -91,6 +97,45 @@ export default function CreateLoan() {
       setInstallment(Math.ceil(p / d).toString());
     }
   }, [principal, duration, loanType]);
+
+
+   // --- CALCULATIONS MEMO ---
+  const calcs = useMemo(() => {
+      const princ = Number(principal) || 0;
+      let interestDed = 0;
+      
+      // 🟢 Interest Logic (Fixed vs Percentage)
+      let calculatedInterest = 0;
+      if (interestType === 'Fixed') {
+          calculatedInterest = Number(fixedInterest) || 0;
+      } else {
+          const r = Number(rate) || 0;
+        //   const d = Number(duration) || 0;
+          if (loanType === 'Monthly') {
+              calculatedInterest  = (princ * r) / 100;
+            } else if (loanType === 'Daily') {
+                // Simplified Daily Logic or 0
+                calculatedInterest  = (princ * r) / 100;
+            //   calculatedInterest  = (princ * (Number(rate)||0) * ((Number(duration)||0)/30)) / 100;
+          }
+      }
+
+   // Apply Deduction if Upfront
+      if (interestUpfront) {
+          interestDed = calculatedInterest;
+      }
+      // Additional Charges
+          const extraCharges = additionalCharges.reduce((sum, item) => {
+          const amt = Number(item.amount);
+          return item.type === 'Discount' ? sum - amt : sum + amt;
+      }, 0);
+
+      const totalDeductions = interestDed  + extraCharges;
+      const netDisbursement = princ - totalDeductions;
+
+      return { calculatedInterest , totalDeductions, netDisbursement };
+  }, [principal, rate,fixedInterest, duration,loanType, interestUpfront,interestType, additionalCharges]);
+
 
   // --- HANDLERS ---
     const handleSplitChange = (modeId, text) => {
@@ -138,14 +183,14 @@ export default function CreateLoan() {
     if (!duration) return Alert.alert("Required", "Enter Duration");
 
     // Split Validation
+    // let finalDisbursementMode = 'Cash'; // Default fallback
      const p = Number(principal);
-    let finalDisbursementMode = 'Cash'; // Default fallback
+    let finalDisbursementMode = 'Cash';
     let finalPaymentSplit = null;
     if (isSplit) {
-
          // Calculate Total Split
         let totalSplit = 0;
-        const splitArray = [];
+        const splitObj  = {}; // Format: { modeId: amount }
         // Calculate Net Disbursement to validate against split if needed, 
         // but typically split must equal Principal or Net Disbursement depending on logic.
         // Assuming split equals Principal for simplicity here as backend handles deductions.
@@ -159,14 +204,15 @@ export default function CreateLoan() {
             const amt = Number(splitAmounts[modeId]);
                 if (amt > 0) {
                     totalSplit += amt;
-                    splitArray.push({ modeId, amount: amt });
+                     splitObj[modeId] = amt;
                 }
             });
-         if (totalSplit !== p) {
-             Alert.alert("Mismatch", `Split Total (${totalSplit}) must match Principal (${p})`);
+             // 🟢 VALIDATION: Split Total must equal Net Disbursement
+        if (Math.abs(totalSplit - calcs.netDisbursement) > 1) { // Allow 1 rupee variance
+             Alert.alert("Mismatch", `Split Total (${totalSplit.toLocaleString()}) must match Net Disburse (${calcs.netDisbursement.toLocaleString()})`);
              return;
         }
-           finalDisbursementMode = 'Split';
+        //    finalDisbursementMode = 'Split';
         // Construct the object structure backend expects for split
         // Backend 'paymentSplit' is usually { cash: 0, online: 0 } or array depending on schema.
         // Looking at your previous Loan model: 
@@ -176,55 +222,57 @@ export default function CreateLoan() {
         // Assuming backend supports dynamic split if mode is 'Split'.
         // If your backend strictly expects { cash: ..., online: ... }, we need to map dynamic modes to these categories.
         
-        // Mapping dynamic modes to 'cash' and 'online' buckets for the existing backend schema:
-        let cashTotal = 0;
-        let onlineTotal = 0;
-        
-        splitArray.forEach(item => {
-            const mode = paymentModes.find(m => m._id === item.modeId);
-            if (mode?.type === 'Cash') cashTotal += item.amount;
-            else onlineTotal += item.amount;
-        });
-        
-        finalPaymentSplit = { cash: cashTotal, online: onlineTotal };
+        // Mapping dynamic modes to 'cash' and 'online' buckets for the existing backend schema:     
+               
+         finalDisbursementMode = 'Split';
+        finalPaymentSplit = splitObj;
 
     } else {
         // Single Mode Logic
         const mode = paymentModes.find(m => m._id === selectedModeId);
         if (!mode) return Alert.alert("Error", "Select a payment mode");
         
-        finalDisbursementMode = mode.type; // 'Cash' or 'Online'
-        // Even for single mode, backend might use paymentSplit structure for consistent accounting?
-        // Or createAdvancedLoan uses disbursementMode.
+        finalDisbursementMode = selectedModeId; // 'Cash' or 'Online'
+        // Send ID directly or Type depending on controller
+        // Controller expects ID in disbursementMode for single
     }
     setLoading(true);
 
     try {
+        // 2. Get the active company ID
+        const storedCompanyId = await AsyncStorage.getItem('activeCompanyId');
+        console.log("storedCompanyId",storedCompanyId);
+        // Safety check
+        if (!storedCompanyId) {
+             Alert.alert("Error", "No Company Selected. Please restart the app.");
+             setLoading(false);
+             return;
+        }
         // Prepare additional charges for backend
         // Backend expects 'deductions' array for extra charges
         const deductions = additionalCharges.map(c => ({
             name: c.name,
             amount: Number(c.amount),
-            type: c.type === 'Charge' ? 'Fixed' : 'Discount', // Map to backend logic
+            type: 'Fixed', // Map to backend logic
             isDiscount: c.type === 'Discount'
         }));
 
         // PAYLOAD MATCHING WEB APP STRUCTURE EXACTLY
         const payload = {
+            companyId: storedCompanyId,
             customerId,
             loanType,
-            disbursementMode: disbursementMode, 
-            
-             // Send split if applicable
-            ...(isSplit && { paymentSplit: finalPaymentSplit }),
+            disbursementMode: finalDisbursementMode, 
+             paymentSplit: finalPaymentSplit ,
             
             financials: {
                 principalAmount: Number(principal),
                 interestRate: Number(rate),
                 duration: Number(duration),
-                durationType: loanType === 'Daily' ? 'Days' : 'Months',
-                
-                // Only include installment if Daily
+                // 🟢 Send Interest Config
+                interestType, // 'Percentage' or 'Fixed'
+                interestRate: interestType === 'Percentage' ? Number(rate) : 0,
+                fixedInterestAmount: interestType === 'Fixed' ? Number(fixedInterest) : 0,
                 ...(loanType === 'Daily' && { installmentAmount: Number(installment) }),
 
                 // Configuration Toggles (Only Interest)
@@ -303,11 +351,30 @@ export default function CreateLoan() {
                 placeholder={loanType === 'Daily' ? 'Days' : 'Months'}
                 value={duration} onChangeText={setDuration}
             />
-            <TextInput 
-                style={[styles.input, {flex:1}]} keyboardType="numeric"
-                placeholder="Interest %"
-                value={rate} onChangeText={setRate}
-            />
+               {/* 🟢 Interest Type Toggle */}
+            <View style={{flex: 1}}>
+                <View style={styles.miniToggle}>
+                    <TouchableOpacity onPress={() => setInterestType('Percentage')} style={[styles.miniBtn, interestType === 'Percentage' && styles.miniActive]}>
+                        <Text style={[styles.miniText, interestType === 'Percentage' && {color:'#fff'}]}>%</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setInterestType('Fixed')} style={[styles.miniBtn, interestType === 'Fixed' && styles.miniActive]}>
+                        <Text style={[styles.miniText, interestType === 'Fixed' && {color:'#fff'}]}>₹</Text>
+                    </TouchableOpacity>
+                </View>
+                {interestType === 'Percentage' ? (
+                    <TextInput 
+                        style={styles.input} keyboardType="numeric"
+                        placeholder="Interest %"
+                        value={rate} onChangeText={setRate}
+                    />
+                ) : (
+                    <TextInput 
+                        style={styles.input} keyboardType="numeric"
+                        placeholder="Fixed Amt"
+                        value={fixedInterest} onChangeText={setFixedInterest}
+                    />
+                )}
+            </View>
           </View>
           {loanType === 'Daily' && (
              <TextInput 
@@ -393,7 +460,27 @@ export default function CreateLoan() {
             </View>
         </View>
 
-        {/* Mode */}
+  {/* 🟢 SUMMARY SECTION */}
+        <View style={styles.summaryBox}>
+            <View style={styles.sumLine}>
+                <Text style={styles.sumText}>Principal</Text>
+                <Text style={styles.sumAmt}>₹ {Number(principal || 0).toLocaleString()}</Text>
+            </View>
+            <View style={styles.sumLine}>
+                <Text style={styles.sumText}>Total Deductions</Text>
+                <Text style={[styles.sumAmt, {color: '#ef4444'}]}>
+                    - ₹ {calcs.totalDeductions.toLocaleString()}
+                </Text>
+            </View>
+             <View style={[styles.netLine, {marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#334155'}]}>
+                <Text style={styles.netLabel}>Net Disburse</Text>
+                <Text style={styles.netAmt}>₹ {calcs.netDisbursement.toLocaleString()}</Text>
+            </View>
+        </View>
+
+
+
+        {/* Disbursement Mode */}
         <View style={styles.card}>
             <Text style={styles.cardTitle}>Disbursement Mode</Text>
             
@@ -468,11 +555,28 @@ const styles = StyleSheet.create({
   disburseText: { color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 1 },
   disabled: { opacity: 0.6, backgroundColor: '#94a3b8' },
   
-  // Split Styles
+  // Mini Toggles for Interest Type
+  miniToggle: { flexDirection: 'row', marginBottom: 4, alignSelf: 'flex-end', backgroundColor: '#e2e8f0', borderRadius: 6 },
+  miniBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  miniActive: { backgroundColor: '#2563eb' },
+  miniText: { fontSize: 10, fontWeight: 'bold', color: '#64748b' },
+
+  // Summary Box
+  summaryBox: { backgroundColor: '#0f172a', padding: 20, borderRadius: 20, marginBottom: 20 },
+  sumLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  sumText: { color: '#94a3b8', fontSize: 13 },
+  sumAmt: { color: '#fff', fontWeight: 'bold' },
+  netLine: { flexDirection: 'row', justifyContent: 'space-between'},
+  netLabel: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  netAmt: { color: '#10b981', fontSize: 24, fontWeight: 'bold' },
+
+
+  
+  // Split & Charges
+
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   modeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  modeBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8 },
-    modeBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
+  modeBtn: { padding: 12, borderRadius: 10, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   modeActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
   modeText: { fontWeight: 'bold', color: '#64748b' },
   textActive: { color: '#fff' },

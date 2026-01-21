@@ -8,10 +8,9 @@ const CapitalLog = require('../models/CapitalLog');
 // @route   POST /api/loans/create-advanced
 exports.createAdvancedLoan = async (req, res) => {
      // Start Transaction Session   
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const {
+            companyId,
             customerId,
             loanType,
             disbursementMode,
@@ -22,10 +21,11 @@ exports.createAdvancedLoan = async (req, res) => {
             notes
         } = req.body;
 
-        const companyId = req.user.companyId;
+        // const companyId = companyId;
+        console.log("companyId",req.user);
 
         // 1. Validation
-        const customer = await Customer.findById(customerId).session(session);
+        const customer = await Customer.findById(customerId);
         if (!customer) return res.status(404).json({ message: 'Customer not found' });
 
         // 2. Calculate Deductions & Net Disbursement
@@ -39,13 +39,13 @@ exports.createAdvancedLoan = async (req, res) => {
             let interestAmount = 0;
             if (loanType === 'Monthly') {
                 // Simple Interest: (P * R * Months) / 100
-                interestAmount = (principal * rate * duration) / 100;
+                interestAmount = (principal * rate) / 100;
             } else if (loanType === 'Daily') {
                  // For Daily, interest is often flat or calculated differently. 
                  // Assuming flat rate for duration if upfront selected for daily.
                  // Or typically daily loans have interest built-in to installment.
                  // Let's assume standard simple interest logic or 0 if not applicable.
-                 interestAmount = (principal * rate * (duration/30)) / 100; 
+                 interestAmount = (principal * rate) / 100; 
             }
             upfrontDeductions += interestAmount;
         }
@@ -62,19 +62,14 @@ exports.createAdvancedLoan = async (req, res) => {
             });
         }
 
-         // Check for specific fields if they persist in some versions of frontend
-        if (financials.deductionConfig?.adminCommission === 'Upfront') {
-             upfrontDeductions += Number(financials.adminCommission?.amount || 0);
-        }
-        if (financials.deductionConfig?.staffCommission === 'Upfront') {
-             upfrontDeductions += Number(financials.staffCommission?.amount || 0);
-        }
+         // Check for specific fields if they persist in some versions of frontend      
 
         const netDisbursement = principal - upfrontDeductions;
 
         // 3. Check Company Capital 
           // 3. Handle Payment Split & Capital Deduction
-        const company = await Company.findById(companyId).session(session);
+        const company = await Company.findById(companyId);
+        console.log("company",company);
         if (!company) throw new Error("Company not found");
 
         let finalPaymentSplit = []; // Array for DB: [{ modeId, amount }]
@@ -153,7 +148,7 @@ exports.createAdvancedLoan = async (req, res) => {
         }
 
         // Save Capital Changes
-        await company.save({ session });
+        await company.save({});
 
 
         // 4. Create Loan
@@ -206,7 +201,7 @@ exports.createAdvancedLoan = async (req, res) => {
             // Storing in a temporary field or notes if schema is rigid, 
             // but ideally Loan Schema should have `transactions` or `disbursementDetails`
             disbursementDetails: finalPaymentSplit 
-        }, { session });
+        });
 
         // 5. Log Capital Entry
         await CapitalLog.create([{
@@ -215,16 +210,12 @@ exports.createAdvancedLoan = async (req, res) => {
             type: 'Withdrawal',
             description: `Loan Disbursement to ${customer.fullName}`,
             date: new Date()
-        }], { session });
+        }]);
 
-        await session.commitTransaction();
-        session.endSession();
 
         res.status(201).json(newLoan[0]);
 
     } catch (error) {
-          await session.abortTransaction();
-        session.endSession();
         console.error("Create Loan Error:", error);
         res.status(500).json({ message: error.message });
     }
