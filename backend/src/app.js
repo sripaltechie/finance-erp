@@ -20,6 +20,8 @@ app.use(cors({
 // Database Connection
 const connectDB = async () => {
     try {
+        const uriii = process.env.MONGO_URI || "mongodb://localhost:27017/finance-erp";
+        console.log("uriii",uriii);
         const conn = await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/finance-erp");
         console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
