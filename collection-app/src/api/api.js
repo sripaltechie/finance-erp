@@ -41,6 +41,8 @@ API.interceptors.response.use(
       // window.location.href = '/login';
     }
     console.log("apijs error",error);
+    console.log("❌ Failed URL:", error.config.url); // Add this line
+    console.log("❌ Status Code:", error.response?.status);
     return Promise.reject(error.response?.data?.message || 'Something went wrong');
   }
 );

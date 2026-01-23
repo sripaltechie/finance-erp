@@ -49,7 +49,7 @@ export default function CompanySetupScreen() {
       // 5. Success Logic
       // Save the new Company ID so the Dashboard loads correctly
       if (data.company && data.company._id) {
-          await AsyncStorage.setItem('activeCompanyId', data.company._id);
+          await AsyncStorage.setItem('activeCompanyId', String(data.company._id));
           await addPaymentModeService({
                    name: "Cash",
                     type: "Cash",

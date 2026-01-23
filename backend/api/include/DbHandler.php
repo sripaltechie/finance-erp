@@ -663,6 +663,44 @@ class DbHandler {
         return $loan;
     }
 
+        /* CAPITAL & DASHBOARD */
+    public function addCapital($companyId, $amount, $type, $source, $notes, $addedBy) {
+        $this->logCapital($companyId, $amount, $type, "$source - $notes");
+        return ["status" => SUCCESS];
+    }
+
+    public function getDashboardStats($companyId) {
+        $response = ['cashBalance' => 0, 'bankBalance' => 0, 'todayCollection' => 0, 'activeLoans' => 0, 'marketOutstanding' => 0];
+        
+        $stmt = $this->conn->prepare("SELECT type, SUM(current_balance) as total FROM payment_modes WHERE company_id = ? AND is_active = 1 GROUP BY type");
+        $stmt->bind_param("i", $companyId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while($row = $res->fetch_assoc()) {
+            if($row['type'] == 'Cash') $response['cashBalance'] = (float)$row['total'];
+            if($row['type'] == 'Online') $response['bankBalance'] = (float)$row['total'];
+        }
+        $stmt->close();
+
+        $stmt = $this->conn->prepare("SELECT SUM(t.amount) FROM transactions t JOIN loans l ON t.loan_id = l.id WHERE l.company_id = ? AND DATE(t.created_at) = CURDATE()");
+        $stmt->bind_param("i", $companyId);
+        $stmt->execute();
+        $stmt->bind_result($todayColl);
+        $stmt->fetch();
+        $response['todayCollection'] = (float)($todayColl ?? 0);
+        $stmt->close();
+
+        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM loans WHERE company_id = ? AND status = 'Active'");
+        $stmt->bind_param("i", $companyId);
+        $stmt->execute();
+        $stmt->bind_result($activeLoans);
+        $stmt->fetch();
+        $response['activeLoans'] = $activeLoans;
+        $stmt->close();
+
+        return $response;
+    }
+
     private function getWalletById($id) {
         $stmt = $this->conn->prepare("SELECT id, name, current_balance FROM payment_modes WHERE id = ?");
         $stmt->bind_param("i", $id);

@@ -31,14 +31,14 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('token', data.token); //      
       await AsyncStorage.setItem('userInfo', JSON.stringify(data));
       if (data && data.companyId) {
-        await AsyncStorage.setItem('activeCompanyId', data.companyId);
+        await AsyncStorage.setItem('activeCompanyId', String(data.companyId));
       }
       // 🟢 NEW: Handle Company Selection
       // console.log("com_name",data.user);
       if (data.user.companies && data.user.companies.length > 0) {
         // Default to the first company for now
         // In a real app, you might show a "Select Branch" screen here
-        await AsyncStorage.setItem('activeCompanyId', data.user.companies[0]._id);
+        await AsyncStorage.setItem('activeCompanyId', String(data.user.companies[0]._id));
         // 3. Show Alert and Navigate ON PRESS of "OK"
       Alert.alert(
         "Success", 

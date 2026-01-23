@@ -1,0 +1,96 @@
+[23-Jan-2026 14:55:55 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 14:55:55 Europe/Berlin] Array
+(
+    [accept] => application/json, text/plain, */*
+    [authorization] => Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+    [Content-Type] => application/json
+    [Content-Length] => 163
+    [Host] => 192.168.29.248
+    [Connection] => Keep-Alive
+    [Accept-Encoding] => gzip
+    [User-Agent] => okhttp/4.12.0
+)
+
+[23-Jan-2026 14:59:55 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 14:59:55 Europe/Berlin] Array
+(
+    [accept] => application/json, text/plain, */*
+    [authorization] => Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+    [Content-Type] => application/json
+    [Content-Length] => 163
+    [Host] => 192.168.29.248
+    [Connection] => Keep-Alive
+    [Accept-Encoding] => gzip
+    [User-Agent] => okhttp/4.12.0
+)
+
+[23-Jan-2026 14:59:55 Europe/Berlin] 
+[23-Jan-2026 15:10:33 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:14:02 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:14:14 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:15:37 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:22:10 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:22:11 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:22:20 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:22:21 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:28:36 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:43:35 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 15:43:35 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:11:12 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:11:12 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:21 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:22 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:22 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:686
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(456): DbHandler->getDashboardStats('1')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyEx in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 686
+[23-Jan-2026 16:28:40 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:45 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:47 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:52 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:28:53 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:29:04 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:29:06 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:29:09 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:29:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:340
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php(315): DbHandler->isCustomerExists('1', '9000668602')
+#1 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(263): DbHandler->createCustomer('1', 'Krishna Panthul...', '9000668602', '', Array, Array, Array, 1)
+#2 [internal function]: {closure}()
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\ in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 340
+[23-Jan-2026 16:29:11 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:29:17 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:30:22 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:33:03 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:40:09 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:40:09 Europe/Berlin] 
+[23-Jan-2026 16:40:33 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:40:33 Europe/Berlin] sripal
+[23-Jan-2026 16:41:08 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:41:08 Europe/Berlin] tokeneyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+[23-Jan-2026 16:41:08 Europe/Berlin] userstdClass Object
+(
+    [id] => 1
+    [role] => Client
+)
+
+[23-Jan-2026 16:41:08 Europe/Berlin] sripal
+[23-Jan-2026 16:45:07 Europe/Berlin] Test message: Logging is working!
+[23-Jan-2026 16:45:07 Europe/Berlin] tokeneyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+[23-Jan-2026 16:45:07 Europe/Berlin] userstdClass Object
+(
+    [id] => 1
+    [role] => Client
+)
+
+[23-Jan-2026 16:45:07 Europe/Berlin] sripal

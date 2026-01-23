@@ -9,7 +9,7 @@ export const Config = {
   // API_URL: 'http://192.168.29.248:5000/api',
   // API_URL: 'http://192.168.29.155:5000/api',  
   // API_URL: "https://financeerp.chandaservices.in/api",
-  API_URL: "http://192.168.29.248:80/applications/finance_erp/api/v1",
+  API_URL: "http://192.168.29.248:80/applications/finance_erp/backend/api/v1",
 
   APP_NAME: 'Finance Pro Mobile',
   VERSION: '1.0.0',

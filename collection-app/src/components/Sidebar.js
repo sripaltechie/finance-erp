@@ -48,7 +48,7 @@ export default function Sidebar({ visible, onClose }) {
 
   const handleLogout = async () => {
     await AsyncStorage.clear();
-    router.replace('/(auth)/login');
+    router.replace('/(auth)/');
   };
 
   const navigateTo = (path) => {

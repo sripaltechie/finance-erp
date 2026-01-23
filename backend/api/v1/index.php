@@ -1,4 +1,12 @@
 <?php
+// 1. Turn on error logging
+ini_set('log_errors', 1);
+
+// 2. Set the destination to the 'error_log' file in THIS folder
+ini_set('error_log', __DIR__ . '/error_log');
+
+// 3. (Optional) Test it immediately
+error_log("Test message: Logging is working!");
 
 require_once '../include/DbHandler.php';
 require_once '../include/Config.php';
@@ -185,6 +193,13 @@ $app->get('/staff/:companyId', 'authenticate', function($companyId) use ($app) {
     echoResponse(200, $staff);
 });
 
+$app->get('/staff/detail/:id', 'authenticate', function($id) use ($app) {
+    $db = new DbHandler();
+    // Assuming you implement getStaffById in DbHandler, otherwise simple query
+    // For now returning empty to prevent crash if not implemented
+    echoResponse(200, []); 
+});
+
 /* =========================================================================
    CUSTOMER ROUTES
    ========================================================================= */
@@ -207,11 +222,13 @@ $app->get('/customers', 'authenticate', function() use ($app) {
     
     // Decode token again to access payload details (or better, store in global during authenticate)
     $headers = apache_request_headers();
-    $token = str_replace("Bearer ", "", $headers['Authorization']);
+    $token = str_replace("Bearer ", "", (isset($headers['Authorization']) ? $headers['Authorization'] : $headers['authorization']));
+    error_log("token".print_r($token, true));
     $user = JWT::decode($token, JWT_SECRET);
+    error_log("user".print_r($user, true));
     
     $companyId = $user->companyId ?? null; 
-    
+     error_log("sripal".print_r($companyId, true));
     if(!$companyId && $user->role === 'Client') {
         // If Client (Owner), they should pass ?companyId=... or we default to first?
         // For simplicity, let's assume Client passes it or we pick first.
@@ -354,7 +371,7 @@ $app->post('/transactions', 'authenticate', function() use ($app) {
     // Best practice: Frontend sends it, or we fetch from Loan.
     // Let's fetch from User Token if available (Staff)
     $headers = apache_request_headers();
-    $token = str_replace("Bearer ", "", $headers['Authorization']);
+    $token = str_replace("Bearer ", "", (isset($headers['Authorization']) ? $headers['Authorization'] : $headers['authorization']));
     $user = JWT::decode($token, JWT_SECRET);
     $companyId = $user->companyId ?? $data['companyId'];
 
@@ -385,7 +402,7 @@ $app->post('/loans/:id/repayment', 'authenticate', function($id) use ($app) {
     
     global $user_id;
     $headers = apache_request_headers();
-    $token = str_replace("Bearer ", "", $headers['Authorization']);
+    $token = str_replace("Bearer ", "", (isset($headers['Authorization']) ? $headers['Authorization'] : $headers['authorization']));
     $user = JWT::decode($token, JWT_SECRET);
     $companyId = $user->companyId ?? $data['companyId'];
 
@@ -398,6 +415,51 @@ $app->post('/loans/:id/repayment', 'authenticate', function($id) use ($app) {
         echoResponse(500, ["message" => "Failed: " . $res['message']]);
     }
 });
+
+
+/* =========================================================================
+   CAPITAL & DASHBOARD ROUTES (The missing part)
+   ========================================================================= */
+
+$app->post('/capital', 'authenticate', function() use ($app) {
+    verifyRequiredParams(array('amount', 'type', 'companyId')); 
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    global $user_id;
+
+    $db = new DbHandler();
+    $notes = $data['notes'] ?? '';
+    $source = $data['source'] ?? 'Manual Entry';
+    
+    $res = $db->addCapital($data['companyId'], $data['amount'], $data['type'], $source, $notes, $user_id);
+
+    if ($res['status'] == SUCCESS) echoResponse(201, ["message" => "Capital entry recorded"]);
+    else echoResponse(500, ["message" => "Failed to add capital"]);
+});
+
+// THIS IS THE ROUTE THAT WAS GIVING 404
+$app->get('/capital/dashboard-stats', 'authenticate', function() use ($app) {
+    $req = $app->request();
+    $companyId = $req->get('companyId');
+    
+    if (!$companyId) {
+        $headers = apache_request_headers();
+        $token = str_replace("Bearer ", "", (isset($headers['Authorization']) ? $headers['Authorization'] : $headers['authorization']));
+        $user = JWT::decode($token, JWT_SECRET);
+        $companyId = $user->companyId ?? null;
+    }
+
+    if (!$companyId) {
+        echoResponse(400, ["message" => "Company ID required"]);
+        return;
+    }
+
+    $db = new DbHandler();
+    $stats = $db->getDashboardStats($companyId);
+    echoResponse(200, $stats);
+});
+
+
 
 /* =========================================================================
    HELPER FUNCTIONS
@@ -459,10 +521,10 @@ function echoResponse($status_code, $response) {
 function authenticate(\Slim\Route $route) {
     $headers = apache_request_headers();
     $response = array();
-    $app = \Slim\Slim::getInstance();
-
-    if (isset($headers['Authorization'])) {
-        $token = str_replace("Bearer ", "", $headers['Authorization']);
+    $app = \Slim\Slim::getInstance();   
+    
+    if (isset($headers['Authorization']) || isset($headers['authorization'])) {            
+    $token = str_replace("Bearer ", "", (isset($headers['Authorization']) ? $headers['Authorization'] : $headers['authorization']));
         try {
             $decoded = JWT::decode($token, JWT_SECRET);
             if ($decoded) {
