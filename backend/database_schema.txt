@@ -1,0 +1,69 @@
+-- 1. Clients Table (SaaS Owners)
+CREATE TABLE clients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    owner_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    mobile VARCHAR(20) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    business_name VARCHAR(255),
+    account_status ENUM('Pending', 'Approved', 'Rejected', 'Suspended') DEFAULT 'Pending',
+    subscription_plan VARCHAR(50) DEFAULT 'Basic', -- 'Basic', 'Gold', 'Platinum'
+    valid_till DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 2. Companies Table (Branches)
+CREATE TABLE companies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    client_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    address TEXT,
+    logo_url VARCHAR(255),
+    settings JSON, -- Stores GeoFencing, InterestType, etc.
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+
+-- 3. Payment Modes (Wallets)
+CREATE TABLE payment_modes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL, -- e.g., "HDFC Bank"
+    type ENUM('Cash', 'Online') NOT NULL,
+    initial_balance DECIMAL(15, 2) DEFAULT 0,
+    current_balance DECIMAL(15, 2) DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+);
+
+-- 4. Users Table (Staff & Managers)
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    mobile VARCHAR(20) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('Admin', 'Manager', 'Collection_Boy', 'Recovery_Agent') DEFAULT 'Collection_Boy',
+    permissions JSON, -- Array of strings e.g. ["APPROVE_LOAN"]
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_mobile_per_company (company_id, mobile) -- Mobile unique per company
+);
+
+-- 5. Capital Logs (Audit Trail)
+CREATE TABLE capital_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    type ENUM('Initial', 'Injection', 'Withdrawal') NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+);

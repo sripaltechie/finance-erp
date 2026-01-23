@@ -11,6 +11,7 @@ export const getStaffListService = async () => {
         const response = await api.get(`/staff/${companyId}`);
         return response.data;
     } catch (error) {
+        // console.log(error);
         throw error.response?.data?.message || "Failed to fetch staff list";
     }
 };

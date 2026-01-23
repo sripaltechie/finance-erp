@@ -17,6 +17,7 @@ export const registerClientService = async (payload) => {
 export const loginClientService = async (payload) => {
     try {
         const response = await api.post('/auth/client/login', payload);
+        // const response = await api.get('/apicheck', payload);
         return response.data;
     } catch (error) {
       // console.log("hitvhi ",error);

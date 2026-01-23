@@ -483,11 +483,11 @@ export default function CreateLoan() {
         {/* Disbursement Mode */}
         <View style={styles.card}>
             <Text style={styles.cardTitle}>Disbursement Mode</Text>
-            
+            {paymentModes.length > 1?
             <View style={styles.switchRow}>
                 <Text style={styles.label}>Split Payment? </Text>
                 <Switch value={isSplit} onValueChange={setIsSplit} trackColor={{true: '#2563eb', false: '#cbd5e1'}} />
-            </View>
+            </View>:null}
 
             {!isSplit ? (
                  // Single Mode Selection

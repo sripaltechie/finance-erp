@@ -50,7 +50,14 @@ export default function CompanySetupScreen() {
       // Save the new Company ID so the Dashboard loads correctly
       if (data.company && data.company._id) {
           await AsyncStorage.setItem('activeCompanyId', data.company._id);
+          await addPaymentModeService({
+                   name: "Cash",
+                    type: "Cash",
+                    initialBalance: Number(0)
+                  });
+                  // Alert.alert("Success", "Wallet created successfully");
       }
+
 
       Alert.alert("Success", "Branch Setup Complete!", [
         { text: "Go to Dashboard", onPress: () => router.replace('/(tabs)') }
