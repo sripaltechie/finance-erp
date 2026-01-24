@@ -20,14 +20,14 @@ export const loginClientService = async (payload) => {
         // const response = await api.get('/apicheck', payload);
         return response.data;
     } catch (error) {
-      // console.log("hitvhi ",error);
+      console.log("hitvhi ",error);
         // if (error.response) {
         //     throw error.response.data?.message || "Login Failed"; 
         // } else {
         //     throw new Error("Network Error");
         // }
         if (error.response) {
-          console.error("❌ Backend Error:", error.response.data);
+          // console.error("❌ Backend Error:", error.response.data?.message);
           throw error.response.data;
         } else if (error.request) { // ✅ Change 'request' to 'error.request'
           console.error("❌ Network Error: No response received from", Config.API_URL);

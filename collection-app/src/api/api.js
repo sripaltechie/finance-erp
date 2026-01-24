@@ -43,7 +43,7 @@ API.interceptors.response.use(
     console.log("apijs error",error);
     console.log("❌ Failed URL:", error.config.url); // Add this line
     console.log("❌ Status Code:", error.response?.status);
-    return Promise.reject(error.response?.data?.message || 'Something went wrong');
+    return Promise.reject(error);//.response?.data?.message || 'Something went wrong');
   }
 );
 

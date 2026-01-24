@@ -512,7 +512,9 @@ function echoResponse($status_code, $response) {
     $app = \Slim\Slim::getInstance();
     $app->status($status_code);
     $app->contentType('application/json');
-    echo json_encode($response);
+    // echo json_encode($response);
+    // Instead of echo, let Slim handle the body
+    $app->response->setBody(json_encode($response));
 }
 
 /**

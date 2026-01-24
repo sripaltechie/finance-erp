@@ -20,14 +20,16 @@ export default function LoginScreen() {
     if (!identifier || !password) {
             Alert.alert("Error", "fill all fields");
       return;
-    }
-    
+    }    
     setLoading(true);
-
     try {
       // 3. Call Backend
       const data = await loginClientService({ identifier:identifier, password:password });
       // 4. Save Session (CRITICAL STEP)
+      if (!data || !data.token) {
+        Alert.alert("Login Failed", "Invalid response from server.");
+        return; // Stop here!
+      }
       await AsyncStorage.setItem('token', data.token); //      
       await AsyncStorage.setItem('userInfo', JSON.stringify(data));
       if (data && data.companyId) {
@@ -40,16 +42,9 @@ export default function LoginScreen() {
         // In a real app, you might show a "Select Branch" screen here
         await AsyncStorage.setItem('activeCompanyId', String(data.user.companies[0]._id));
         // 3. Show Alert and Navigate ON PRESS of "OK"
-      Alert.alert(
-        "Success", 
-        `Welcome back, ${data.user.ownerName || 'Owner'}`,
-        [
-          { 
-            text: "Go to Dashboard", 
-            onPress: () => router.replace('/(tabs)') // 🟢 Navigate here
-          }
-        ]
-      );
+        Alert.alert("Success", `Welcome, ${data.user.ownerName}`, [
+          { text: "Go to Dashboard", onPress: () => router.replace('/(tabs)') }
+        ]);
       } else {
         Alert.alert(
           "Notice", 
@@ -66,7 +61,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)'); 
 
     } catch (error) {
-      console.log(error);
+      console.log("gggg",error.response);
       // const msg = error.response?.data?.message || error.message || "Login Failed";
       // Alert.alert("Error", msg);
       if (error.response && error.response.status === 401) {

@@ -94,3 +94,144 @@ Stack trace:
 )
 
 [23-Jan-2026 16:45:07 Europe/Berlin] sripal
+[24-Jan-2026 06:59:16 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:14:57 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:14:58 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:14:58 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:686
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(458): DbHandler->getDashboardStats('1')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyEx in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 686
+[24-Jan-2026 07:15:03 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:15:03 Europe/Berlin] tokeneyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+[24-Jan-2026 07:15:03 Europe/Berlin] userstdClass Object
+(
+    [id] => 1
+    [role] => Client
+)
+
+[24-Jan-2026 07:15:03 Europe/Berlin] sripal
+[24-Jan-2026 07:15:03 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:363
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(246): DbHandler->getCustomers('1', '')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyExc in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 363
+[24-Jan-2026 07:15:57 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:15:57 Europe/Berlin] tokeneyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+[24-Jan-2026 07:15:57 Europe/Berlin] userstdClass Object
+(
+    [id] => 1
+    [role] => Client
+)
+
+[24-Jan-2026 07:15:57 Europe/Berlin] sripal
+[24-Jan-2026 07:15:57 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:363
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(246): DbHandler->getCustomers('1', '')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyExc in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 363
+[24-Jan-2026 07:26:28 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:26:28 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:26:28 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:686
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(458): DbHandler->getDashboardStats('1')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyEx in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 686
+[24-Jan-2026 07:26:35 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:26:35 Europe/Berlin] tokeneyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+[24-Jan-2026 07:26:35 Europe/Berlin] userstdClass Object
+(
+    [id] => 1
+    [role] => Client
+)
+
+[24-Jan-2026 07:26:35 Europe/Berlin] sripal
+[24-Jan-2026 07:26:35 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:363
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(246): DbHandler->getCustomers('1', '')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyExc in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 363
+[24-Jan-2026 07:28:42 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:28:42 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:28:42 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:686
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(458): DbHandler->getDashboardStats('1')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyEx in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 686
+[24-Jan-2026 07:28:47 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:28:47 Europe/Berlin] tokeneyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwicm9sZSI6IkNsaWVudCJ9.yp7mS1yAl9BAcRhH4vH8HWKd5fnEHvCHjOmdL7e6aFA
+[24-Jan-2026 07:28:47 Europe/Berlin] userstdClass Object
+(
+    [id] => 1
+    [role] => Client
+)
+
+[24-Jan-2026 07:28:47 Europe/Berlin] sripal
+[24-Jan-2026 07:28:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php:363
+Stack trace:
+#0 D:\xampp\htdocs\applications\finance_erp\backend\api\v1\index.php(246): DbHandler->getCustomers('1', '')
+#1 [internal function]: {closure}()
+#2 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Route.php(436): call_user_func_array(Object(Closure), Array)
+#3 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1307): Slim\Route->dispatch()
+#4 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\Flash.php(85): Slim\Slim->call()
+#5 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\MethodOverride.php(92): Slim\Middleware\Flash->call()
+#6 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Middleware\PrettyExceptions.php(67): Slim\Middleware\MethodOverride->call()
+#7 D:\xampp\htdocs\applications\finance_erp\backend\api\libs\Slim\Slim.php(1254): Slim\Middleware\PrettyExc in D:\xampp\htdocs\applications\finance_erp\backend\api\include\DbHandler.php on line 363
+[24-Jan-2026 07:34:03 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:38:32 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:40:00 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:40:22 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:41:11 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:41:48 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:43:30 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:43:47 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:45:54 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:46:11 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:46:30 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:47:43 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:55:34 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 07:56:06 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:26:51 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:28:15 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:31:33 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:33:25 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:34:31 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:35:07 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:42:06 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:42:42 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:43:10 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:47:13 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:49:13 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:49:44 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:50:30 Europe/Berlin] Test message: Logging is working!
+[24-Jan-2026 08:50:36 Europe/Berlin] Test message: Logging is working!

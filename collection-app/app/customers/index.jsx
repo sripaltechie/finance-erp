@@ -19,6 +19,7 @@ export default function CustomerListScreen() {
   // Load Data
   const loadCustomers = async (query = '') => {
     try {
+      if (!refreshing) setLoading(true); // Only show main loader if not pull-to-refresh
       // searchCustomerService calls GET /customers?search={query}
       // If query is empty, it returns the list (backend logic supports this)
       const data = await searchCustomerService(query);
@@ -51,43 +52,55 @@ export default function CustomerListScreen() {
     >
       <View style={styles.cardHeader}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{item.fullName.charAt(0).toUpperCase()}</Text>
+          {/* <Text style={styles.avatarText}>{item.fullName.charAt(0).toUpperCase()}</Text> */}
+            <Text style={styles.avatarText}>
+            {item.fullName ? item.fullName.charAt(0).toUpperCase() : '?'}
+          </Text>
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.name}>{item.fullName}</Text>
           <View style={styles.row}>
             <Phone size={12} color="#64748b" style={{ marginRight: 4 }} />
             <Text style={styles.subText}>{item.mobile}</Text>
+             {item.shortId ? (
+              <Text style={[styles.subText, { marginLeft: 8, color: '#2563eb', fontWeight: 'bold' }]}>
+                ID: {item.shortId}
+              </Text>
+            ) : null}
           </View>
-          {item.locations?.residence?.addressText && (
+          {/* {item.locations?.residence?.addressText && (
             <View style={[styles.row, { marginTop: 2 }]}>
               <MapPin size={12} color="#64748b" style={{ marginRight: 4 }} />
               <Text style={styles.subText} numberOfLines={1}>{item.locations.residence.addressText}</Text>
             </View>
-          )}
+          )} */}
         </View>
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.actions}>
-        <TouchableOpacity 
+
+        {/* <TouchableOpacity 
           style={styles.actionBtn} 
           onPress={() => router.push({ pathname: '/customers/manage', params: { id: item._id } })}
         >
           <Edit size={16} color="#64748b" />
           <Text style={styles.actionText}>Edit Profile</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         
-        <View style={styles.vDiv} />
-
-        <TouchableOpacity 
-          style={styles.actionBtn} 
-          onPress={() => router.push({ pathname: '/loans/create', params: { customerId: item._id } })}
-        >
-          <FileText size={16} color="#2563eb" />
-          <Text style={[styles.actionText, { color: '#2563eb' }]}>New Loan</Text>
-        </TouchableOpacity>
+         {/* Level Tag */}
+        <View style={[
+            styles.levelTag, 
+            item.level === 'Level 1' ? styles.lvl1 : 
+            item.level === 'Level 3' ? styles.lvl3 : styles.lvl2
+        ]}>
+            <Text style={[
+                styles.levelText,
+                item.level === 'Level 1' ? styles.lvl1T : 
+                item.level === 'Level 3' ? styles.lvl3T : styles.lvl2T
+            ]}>{item.level || 'Level 2'}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -114,7 +127,7 @@ export default function CustomerListScreen() {
           <Search size={20} color="#94a3b8" style={{ marginRight: 10 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by Name or Mobile..."
+            placeholder="Search by Name, Mobile or ID"
             value={searchText}
             onChangeText={handleSearch}
           />
@@ -127,8 +140,12 @@ export default function CustomerListScreen() {
       ) : (
         <FlatList
           data={customers}
-          keyExtractor={item => item._id}
+         keyExtractor={(item, index) => {
+            // If id exists, use it; otherwise, fallback to the index
+            return item?.id ? item.id.toString() : index.toString();
+          }}
           renderItem={renderItem}
+          // keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={{ padding: 16, paddingTop: 0 }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadCustomers(searchText); }} />

@@ -40,13 +40,18 @@ export const getCustomerByIdService = async (id) => {
     }
 };
 
-// @desc    Search Customers (For Referrer)
+// @desc    Search Customers (Fix: Passes companyId)
 export const searchCustomerService = async (query) => {
     try {
-        const response = await api.get(`/customers?search=${query}`);
+        const companyId = await AsyncStorage.getItem('activeCompanyId');
+        if (!companyId) throw new Error("No Company Selected");
+
+        // Append companyId to the query parameters
+        const response = await api.get(`/customers?companyId=${companyId}&search=${query}`);
         return response.data;
     } catch (error) {
-        // Return empty array if search fails 
+        console.error("Search Error:", error);
+        // Return empty array instead of throwing to prevent UI crash on search fail
         return [];
     }
 };

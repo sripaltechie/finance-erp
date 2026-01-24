@@ -10,6 +10,8 @@ export const registerClientService = async (userData) => {
 // 2. Client Login
 export const loginClientService = async (credentials) => {
   // credentials: { email, password }
+  console.log("response1");
   const response = await api.post('/auth/client/login', credentials);
+  console.log("response",response);
   return response.data;
 };
