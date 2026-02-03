@@ -23,6 +23,7 @@ export default function CustomerListScreen() {
       // searchCustomerService calls GET /customers?search={query}
       // If query is empty, it returns the list (backend logic supports this)
       const data = await searchCustomerService(query);
+      console.log(data);
       setCustomers(data);
     } catch (error) {
       console.log(error);
@@ -47,24 +48,25 @@ export default function CustomerListScreen() {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity 
-      style={styles.card}
-      onPress={() => router.push({ pathname: '/customers/manage', params: { id: item._id } })}
+      style={styles.card}      
+      onPress={() => router.push({ pathname: '/customers/[id]', params: { id: item._id } })}
+      // onPress={() => router.push({ pathname: '/customers/manage', params: { id: item._id } })}
     >
       <View style={styles.cardHeader}>
         <View style={styles.avatar}>
           {/* <Text style={styles.avatarText}>{item.fullName.charAt(0).toUpperCase()}</Text> */}
             <Text style={styles.avatarText}>
-            {item.fullName ? item.fullName.charAt(0).toUpperCase() : '?'}
+            {item.full_name ? item.full_name.charAt(0).toUpperCase() : '?'}
           </Text>
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.name}>{item.fullName}</Text>
+          <Text style={styles.name}>{item.full_name}</Text>
           <View style={styles.row}>
             <Phone size={12} color="#64748b" style={{ marginRight: 4 }} />
             <Text style={styles.subText}>{item.mobile}</Text>
-             {item.shortId ? (
+             {item.short_id ? (
               <Text style={[styles.subText, { marginLeft: 8, color: '#2563eb', fontWeight: 'bold' }]}>
-                ID: {item.shortId}
+                ID: {item.short_id}
               </Text>
             ) : null}
           </View>
@@ -101,6 +103,16 @@ export default function CustomerListScreen() {
                 item.level === 'Level 3' ? styles.lvl3T : styles.lvl2T
             ]}>{item.level || 'Level 2'}</Text>
         </View>
+
+          <View style={styles.vDiv} />
+        <TouchableOpacity 
+          style={styles.actionBtn} 
+          onPress={() => router.push({ pathname: '/loans/create', params: { customerId: item._id } })}
+        >
+          <FileText size={16} color="#2563eb" />
+          <Text style={[styles.actionText, { color: '#2563eb' }]}>New Loan</Text>
+        </TouchableOpacity>
+
       </View>
     </TouchableOpacity>
   );
@@ -142,7 +154,7 @@ export default function CustomerListScreen() {
           data={customers}
          keyExtractor={(item, index) => {
             // If id exists, use it; otherwise, fallback to the index
-            return item?.id ? item.id.toString() : index.toString();
+            return item?._id ? item._id.toString() : index.toString();
           }}
           renderItem={renderItem}
           // keyExtractor={(item) => item.id.toString()}

@@ -17,3 +17,9 @@ export const getLoanDetailsService = async (id) => {
     const response = await api.get(`/loans/${id}`);
     return response.data;
 };
+
+// 🟢 NEW: Get Loans by Customer ID (For Android Customer Details)
+export const getCustomerLoansService = async (customerId) => {
+    const response = await api.get(`/customers/${customerId}/loans`);
+    return response.data;
+};

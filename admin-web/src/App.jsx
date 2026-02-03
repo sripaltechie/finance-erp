@@ -11,6 +11,7 @@ import StaffManagement from './pages/Client/StaffManagement';
 import RegisterScreen from '../../admin-web/src/pages/Auth/Register'
 import LoginScreen from '../../admin-web/src/pages/Auth/Login'
 import Customers from './pages/Client/Customers';
+import CustomerDetails from './pages/Client/CustomerDetails'; 
 import PaymentModes from './pages/Client/PaymentModes';
 
 // Mock User for Testing (Change role to test different views)
@@ -46,6 +47,7 @@ function App() {
           <Route path="/client/companies" element={<CompanySetup />} />
           <Route path="/client/staff" element={<StaffManagement />} />
           <Route path="/client/customers" element={<Customers />} />
+           <Route path="/client/customers/:id" element={<CustomerDetails />} /> 
           
           {/* Placeholders for future pages */}
           <Route path="/dashboard" element={<div className="p-8"><h1>Main Dashboard (Coming Soon)</h1></div>} />

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, Map, Search, User } from 'lucide-react-native';
+import { LayoutDashboard, Map, Search, User ,Building2} from 'lucide-react-native';
 import { View } from 'react-native';
 
 export default function TabLayout() {
@@ -14,6 +14,7 @@ export default function TabLayout() {
           height: 70, // Taller bar for modern look
           paddingBottom: 10,
           paddingTop: 10,
+          marginBottom: 30
         },
         tabBarActiveTintColor: '#2563eb', // Blue-600
         tabBarInactiveTintColor: '#94a3b8', // Slate-400
@@ -61,6 +62,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="company-setup"
+        options={{
+          title: 'Company',
+          tabBarIcon: ({ color, size }) => <Building2 size={size} color={color} />,
         }}
       />
     </Tabs>
