@@ -5,22 +5,31 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
-  ChevronLeft, CheckCircle2, Wallet, CreditCard, Plus, Trash2,Banknote
+  ChevronLeft, CheckCircle2, Wallet, CreditCard, Plus, Trash2,Banknote,Calendar, User, X, Search
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Services
 import { createLoanService } from '../../src/api/loanService';
-import { getCustomerByIdService } from '../../src/api/customerService';
+// import { getCustomerByIdService, searchCustomerService  } from '../../src/api/customerService';
+import {getCustomerByIdService,searchCustomerService} from '../../src/api/customerService';
 import { getPaymentModesService } from '@/src/api/companyService';
 
 export default function CreateLoan() {
   const router = useRouter();
   const { customerId } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [customer, setCustomer] = useState(null);
+
+   // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
 
   //Payment Modes Data
   const [paymentModes, setPaymentModes] = useState([]);
@@ -28,6 +37,8 @@ export default function CreateLoan() {
 
   // --- FORM STATE ---
   const [loanType, setLoanType] = useState('Daily');
+  const [startDate, setStartDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [principal, setPrincipal] = useState('');
   
   // Financials
@@ -59,35 +70,48 @@ export default function CreateLoan() {
 
   const [notes, setNotes] = useState('');
 
-  // --- 1. LOAD Data ---
+  // Load Initial Data
   useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-        try {
-          if (customerId) {              
+    const init = async () => {
+      try {
+        if (customerId) {
             const custData = await getCustomerByIdService(customerId);
-            if (isMounted) setCustomer(custData);
-          }
-        // const data = await getCustomerByIdService(customerId);
-        // if (isMounted) setCustomer(data);
-
-          // Fetch Payment Modes
-        const modesData = await getPaymentModesService();
-        if (isMounted) {
-            setPaymentModes(modesData);
-            if (modesData.length > 0) {
-                setSelectedModeId(modesData[0]._id); // Default to first
-            }
+            setCustomer(custData);
         }
-      } catch (err) {
-        console.log("Fetch error:", err);
+        
+        const modesData = await getPaymentModesService();
+        setPaymentModes(modesData);
+        if(modesData.length > 0) setSelectedModeId(modesData[0]._id);
+
+      } catch (error) {
+        Alert.alert("Error", "Failed to load data");
+        router.back();
       } finally {
-        if (isMounted) setFetching(false);
+        setFetching(false);
       }
     };
-    loadData();
-    return () => { isMounted = false; };
+    init();
   }, [customerId]);
+
+
+  // Handle Search
+  const handleSearch = async (text) => {
+    setSearchQuery(text);
+    if (text.length > 2) {
+      const results = await searchCustomerService(text);
+      setSearchResults(results);
+      setShowResults(true);
+    } else {
+      setSearchResults([]);
+      setShowResults(false);
+    }
+  };
+
+  const selectCustomer = (cust) => {
+    setCustomer(cust);
+    setSearchQuery('');
+    setShowResults(false);
+  };
 
   // --- 2. AUTO-CALCULATE INSTALLMENT ---
   useEffect(() => {
@@ -179,9 +203,14 @@ export default function CreateLoan() {
 
   // --- 3. SUBMIT HANDLER ---
   const handleSubmit = async () => {
-    if (!principal) return Alert.alert("Required", "Enter Principal Amount");
-    if (!duration) return Alert.alert("Required", "Enter Duration");
-
+      if(!customer) {
+        Alert.alert("Missing Field", "Please select a customer");
+        return;
+    }
+    if(!principal || !duration || !selectedModeId) {
+        Alert.alert("Missing Fields", "Please fill all required fields");
+        return;
+    }
     // Split Validation
     // let finalDisbursementMode = 'Cash'; // Default fallback
      const p = Number(principal);
@@ -260,8 +289,9 @@ export default function CreateLoan() {
         // PAYLOAD MATCHING WEB APP STRUCTURE EXACTLY
         const payload = {
             companyId: storedCompanyId,
-            customerId,
+            customerId: customer._id,
             loanType,
+            startDate: startDate.toISOString(), 
             disbursementMode: finalDisbursementMode, 
              paymentSplit: finalPaymentSplit ,
             
@@ -296,7 +326,16 @@ export default function CreateLoan() {
         await createLoanService(payload);
         
         Alert.alert("Success", "Loan Created Successfully", [
-            { text: "OK", onPress: () => router.replace('/(tabs)/collection') }
+            { 
+              text: "OK", 
+              onPress: () => {
+                if(newLoanId) {
+                  router.replace(`/loans/${newLoanId}`); // Navigate to Loan Details
+                } else {
+                  router.replace(`/customers/${customer._id}`); // Fallback
+                }
+              } 
+            }
         ]);
 
     } catch (err) {
@@ -307,23 +346,104 @@ export default function CreateLoan() {
     }
   };
 
+    // Date Change Handler
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || startDate;
+    setShowDatePicker(Platform.OS === 'ios');
+    setStartDate(currentDate);
+  };
+
   if (fetching) return <View style={styles.center}><ActivityIndicator size="large" color="#2563eb" /></View>;
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    // <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView 
+      style={[styles.container, { paddingBottom: insets.bottom }]} // 🟢 NEW: Add safe area padding
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <ChevronLeft color="#0f172a" size={24} />
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>New Loan</Text>
-          <Text style={styles.customerSub}>{customer?.fullName || 'Loading...'}</Text>
+          {/* <Text style={styles.customerSub}>{customer?.fullName || 'Loading...'}</Text> */}
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
         
-        {/* Type Toggle */}
+          {/* 1. 🟢 CUSTOMER INFO CARD */}
+        {/* 1. CUSTOMER & DATE ROW */}
+        <View style={[styles.row, { marginBottom: 20 }]}>
+            {/* LEFT: Customer Selection */}
+            <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.label}>Customer</Text>
+                {customer ? (
+                    <View style={styles.compactCard}>
+                        <View style={{flex: 1}}>
+                            <Text style={styles.compactName} numberOfLines={1}>{customer.full_name}</Text>
+                            <Text style={styles.compactMobile}>{customer.mobile}</Text>
+                        </View>
+                        {!customerId && (
+                            <TouchableOpacity onPress={() => setCustomer(null)}>
+                                <X size={16} color="#ef4444" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ) : (
+                    <View>
+                        <View style={styles.searchBox}>
+                            <Search size={16} color="#94a3b8" />
+                            <TextInput 
+                                style={styles.searchInput}
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChangeText={handleSearch}
+                            />
+                        </View>
+                        {showResults && (
+                            <View style={styles.dropdown}>
+                                {searchResults.map(item => (
+                                    <TouchableOpacity 
+                                        key={item._id} 
+                                        style={styles.dropdownItem}
+                                        onPress={() => selectCustomer(item)}
+                                    >
+                                        <Text style={styles.itemText}>{item.full_name}</Text>
+                                        <Text style={styles.itemSub}>{item.mobile}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                )}
+            </View>
+
+            {/* RIGHT: Date Picker */}
+            <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.label}>Start Date</Text>
+                <TouchableOpacity 
+                    style={styles.compactCard} // Reuse style for consistency
+                    onPress={() => setShowDatePicker(true)}
+                >
+                    <Calendar size={18} color="#2563eb" style={{ marginRight: 8 }} />
+                    <Text style={styles.dateText}>{startDate.toLocaleDateString()}</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+
+        {showDatePicker && (
+            <DateTimePicker
+                testID="dateTimePicker"
+                value={startDate}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+            />
+        )}
+
+        {/* 3. Loan Type */}
         <View style={styles.typeContainer}>
             {['Daily', 'Monthly'].map(t => (
               <TouchableOpacity 
@@ -539,6 +659,22 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0f172a' },
   customerSub: { fontSize: 13, color: '#64748b' },
   scroll: { padding: 16 },
+  
+  // Compact Card & Search
+  compactCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', padding: 12, borderRadius: 10, height: 60 },
+  compactName: { fontSize: 14, fontWeight: 'bold', color: '#1e40af' },
+  compactMobile: { fontSize: 12, color: '#64748b' },
+
+   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 10, height: 60 },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#0f172a' },
+  dropdown: { position: 'absolute', top: 65, left: 0, right: 0, backgroundColor: '#fff', borderRadius: 10, elevation: 5, zIndex: 100, maxHeight: 200 },
+  dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  itemText: { fontWeight: 'bold', color: '#1e293b' },
+  itemSub: { fontSize: 12, color: '#64748b' },
+
+  dateText: { fontSize: 14, fontWeight: 'bold', color: '#0f172a' },
+
+
   card: { backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 16, elevation: 1 },
   cardTitle: { fontSize: 14, fontWeight: 'bold', color: '#0f172a', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 8 },
   typeContainer: { flexDirection: 'row', backgroundColor: '#e2e8f0', borderRadius: 12, padding: 4, marginBottom: 20 },
@@ -592,5 +728,10 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: '#0f172a', padding: 10, borderRadius: 8 },
   chargeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   chargeText: { fontSize: 14, color: '#334155', fontWeight: '500' },
-  chargeAmt: { fontSize: 14, fontWeight: 'bold' }
+  chargeAmt: { fontSize: 14, fontWeight: 'bold' },
+
+    // createBtn: { backgroundColor: '#000000', padding: 18, borderRadius: 16, alignItems: 'center' },
+    btnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+    disabled: { opacity: 0.6, backgroundColor: '#94a3b8' },
+
 });

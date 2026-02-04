@@ -23,7 +23,9 @@ export default function Sidebar({ visible, onClose }) {
     const loadUser = async () => {
       try {
         const userData = await AsyncStorage.getItem('userInfo');
+        console.log("sripa;",JSON.parse(userData));
         if (userData) setUser(JSON.parse(userData));
+        console.log(user);
       } catch (e) { console.log(e); }
     };
     if (visible) loadUser();

@@ -167,7 +167,7 @@ export default function CustomerDetailsScreen() {
                 <TouchableOpacity 
                     key={loan._id} 
                     style={styles.loanCard}
-                    onPress={() => Alert.alert("Coming Soon", "Loan Details screen is under construction.")}
+                    onPress={() => router.push({ pathname: `/loans/${loan._id}` })}
                 >
                     <View style={styles.loanHeader}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

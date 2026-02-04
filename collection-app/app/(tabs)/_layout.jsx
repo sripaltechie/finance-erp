@@ -1,20 +1,32 @@
 import { Tabs } from 'expo-router';
 import { LayoutDashboard, Map, Search, User ,Building2} from 'lucide-react-native';
-import { View } from 'react-native';
+import { View ,Platform} from 'react-native';
+import { useEffect } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 🟢 Import this
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets(); // 🟢 Get safe area dimensions
+
+    useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#000000'); // Black background for back/home buttons
+      NavigationBar.setButtonStyleAsync('light'); // White icons
+    }
+  }, []);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false, // We usually hide default headers for custom look
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#060606',
           borderTopWidth: 1,
           borderTopColor: '#e2e8f0',
-          height: 70, // Taller bar for modern look
-          paddingBottom: 10,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 10), 
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
           paddingTop: 10,
-          marginBottom: 30
+          elevation: 0
         },
         tabBarActiveTintColor: '#2563eb', // Blue-600
         tabBarInactiveTintColor: '#94a3b8', // Slate-400
