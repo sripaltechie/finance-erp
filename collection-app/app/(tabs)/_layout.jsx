@@ -1,19 +1,12 @@
 import { Tabs } from 'expo-router';
 import { LayoutDashboard, Map, Search, User ,Building2} from 'lucide-react-native';
-import { View ,Platform} from 'react-native';
-import { useEffect } from 'react';
-import * as NavigationBar from 'expo-navigation-bar';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 🟢 Import this
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets(); // 🟢 Get safe area dimensions
 
-    useEffect(() => {
-    if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#000000'); // Black background for back/home buttons
-      NavigationBar.setButtonStyleAsync('light'); // White icons
-    }
-  }, []);
+    
 
   return (
     <Tabs
