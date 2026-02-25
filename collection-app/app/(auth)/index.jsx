@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Lock, Smartphone, ArrowRight } from 'lucide-react-native';
@@ -6,6 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Impo
 
 // 2. Import Service
 import { loginClientService } from '../../src/api/authService';
+import { checkLicenseStatus } from '../../src/api/licenseService';
+
 
 export default function LoginScreen() {
  const router = useRouter();
@@ -13,8 +15,21 @@ export default function LoginScreen() {
   
 
   // 🟢 Single State for Input
-  const [identifier, setIdentifier] = useState('9000668609'); 
+  const [identifier, setIdentifier] = useState('7702993009'); 
   const [password, setPassword] = useState('123456');
+
+   // 🟢 BOOT GUARD: CHECK LICENSE BEFORE ALLOWING LOGIN
+  useEffect(() => {
+    const verifyLicense = async () => {
+      const status = await checkLicenseStatus();
+      setLoading(false); // Stop loading once checked  
+      if (status.status !== 'active') {
+         // Redirect to activation screen if expired or error
+         router.replace('/activation');
+      }
+    };
+    verifyLicense();
+  }, []);
     
   const handleLogin = async () => {
     if (!identifier || !password) {
@@ -61,7 +76,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)'); 
 
     } catch (error) {
-      console.log("gggg",error.response);
+      console.log("Login error", error.response);
       // const msg = error.response?.data?.message || error.message || "Login Failed";
       // Alert.alert("Error", msg);
       if (error.response && error.response.status === 401) {
@@ -75,6 +90,15 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+   // Prevent rendering the login form while the license is being checked
+  if (loading && !identifier) {
+    return (
+      <View style={[styles.container, { alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

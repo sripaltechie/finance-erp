@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, 
-  Alert, Modal, TextInput, KeyboardAvoidingView, Platform 
+  Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Switch 
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { 
   ArrowLeft, Calendar, FileText, DollarSign, Percent, 
-  Clock, CheckCircle, AlertTriangle, X 
+  Clock, CheckCircle, AlertTriangle, X, Banknote, CreditCard 
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../src/api/api'; 
 
 // Services
-import { getLoanDetailsService, addRepaymentService } from '../../src/api/loanService';
+import { getLoanDetailsService, collectPaymentService } from '../../src/api/loanService';
+import { getPaymentModesService } from '../../src/api/companyService';
 
 export default function LoanDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   
   const [loan, setLoan] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(false);
   
@@ -24,15 +28,36 @@ export default function LoanDetailsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  
+  // Split Payment State
+  const [isSplit, setIsSplit] = useState(false);
+  const [splitAmounts, setSplitAmounts] = useState({});
+
+  // Payment Config
+  const [paymentModes, setPaymentModes] = useState([]);
+  const [selectedModeId, setSelectedModeId] = useState('');
+  const [activeCompanyId, setActiveCompanyId] = useState(null);
 
   // Load Data
   const loadLoan = async () => {
     try {
       setLoading(true);
       const data = await getLoanDetailsService(id);
-      // Backend returns either { loan: {...}, stats: {...} } or just loan object depending on implementation
-      // Adapting to both:
       setLoan(data.loan || data); 
+      
+      // Load History
+      const txns = await api.get(`/loans/${id}/transactions?limit=1000`);
+      setHistory(txns.data);
+
+      // Load Configs for Payment
+      const cId = await AsyncStorage.getItem('activeCompanyId');
+      setActiveCompanyId(cId);
+      
+      if (cId) {
+        const modes = await getPaymentModesService();
+        setPaymentModes(modes);
+        if (modes.length > 0) setSelectedModeId(modes[0]._id);
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load loan details");
       router.back();
@@ -45,24 +70,57 @@ export default function LoanDetailsScreen() {
     if (id) loadLoan();
   }, [id]);
 
+  // Recalculate amount if Split Payment is ON
+  useEffect(() => {
+    if (isSplit) {
+        const total = Object.values(splitAmounts).reduce((sum, val) => sum + (Number(val) || 0), 0);
+        setAmount(String(total));
+    }
+  }, [splitAmounts, isSplit]);
+
+
   // Handle Collection
   const handleCollect = async () => {
-    if (!amount) return Alert.alert("Invalid Amount", "Please enter an amount.");
+    let paymentSplitPayload = [];
+
+    if (isSplit) {
+        paymentSplitPayload = Object.keys(splitAmounts)
+            .filter(id => Number(splitAmounts[id]) > 0)
+            .map(id => ({ modeId: Number(id), amount: Number(splitAmounts[id]) }));
+        
+        if (paymentSplitPayload.length === 0) return Alert.alert("Error", "Enter split amounts");
+        const totalSplit = paymentSplitPayload.reduce((sum, item) => sum + item.amount, 0);
+        if (totalSplit <= 0) return Alert.alert("Error", "Enter valid amounts");
+    } else {
+        if (!amount || isNaN(amount) || Number(amount) <= 0) return Alert.alert("Invalid Amount", "Please enter an amount.");
+        if (!selectedModeId) return Alert.alert("Payment Mode", "Please select a payment mode.");
+        paymentSplitPayload = [{ modeId: selectedModeId, amount: Number(amount) }];
+    }
+
+    if (!activeCompanyId) return Alert.alert("Error", "Company ID missing. Restart App.");
     
     setCollecting(true);
     try {
-      await addRepaymentService(id, {
+      const payload = {
+        companyId: activeCompanyId,
         amount: Number(amount),
         notes: note,
-        type: 'Cash' // Defaulting to Cash for now
-      });
+        paymentSplit: paymentSplitPayload
+      };
+
+      await collectPaymentService(id, payload);
+      
       Alert.alert("Success", "Payment Recorded!");
       setModalVisible(false);
       setAmount('');
       setNote('');
+      setIsSplit(false);
+      setSplitAmounts({});
       loadLoan(); // Refresh
     } catch (error) {
-      Alert.alert("Failed", "Could not record payment");
+        console.log("Collection Error:", error);
+        const msg = error?.response?.data?.message || error?.message || "Could not record payment";
+        Alert.alert("Failed", msg);
     } finally {
       setCollecting(false);
     }
@@ -94,7 +152,7 @@ export default function LoanDetailsScreen() {
       <Stack.Screen 
         options={{
           headerShown: true,
-          title: `Loan #${id}`,
+          title: `Loan #${loan.shortId || id}`, // Show nicer ID if available
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
               <ArrowLeft size={24} color="#0f172a" />
@@ -115,7 +173,6 @@ export default function LoanDetailsScreen() {
           </View>
           
           <View style={styles.divider} />
-          
           <View style={styles.amountContainer}>
             <Text style={styles.amountLabel}>Principal Amount</Text>
             <Text style={styles.amountValue}>₹{fin.principalAmount?.toLocaleString()}</Text>
@@ -172,9 +229,28 @@ export default function LoanDetailsScreen() {
             </View>
         ) : null}
 
+        {/* 5. HISTORY TABLE */}
+        {history.length > 0 && (
+            <View style={[styles.card, { marginTop: 10, padding: 16 }]}>
+                <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>Transaction History</Text>
+                <View style={styles.tableHeader}>
+                    <Text style={[styles.th, {flex: 2}]}>Date</Text>
+                    <Text style={[styles.th, {flex: 1, textAlign: 'right'}]}>Amount</Text>
+                </View>
+                {history.map((txn, i) => (
+                    <View key={txn.id || i} style={styles.tableRow}>
+                        <Text style={[styles.td, {flex: 2}]}>{new Date(txn.date).toLocaleDateString()}</Text>
+                        <Text style={[styles.td, {flex: 1, textAlign: 'right', fontWeight: 'bold', color: '#16a34a'}]}>
+                            + ₹{Number(txn.amount).toLocaleString()}
+                        </Text>
+                    </View>
+                ))}
+            </View>
+        )}
+
       </ScrollView>
 
-      {/* 5. Collect Button */}
+      {/* Collect Button */}
       {loan.status === 'Active' && (
         <View style={styles.footer}>
             <TouchableOpacity 
@@ -208,13 +284,58 @@ export default function LoanDetailsScreen() {
 
                 <Text style={styles.inputLabel}>Amount Received (₹)</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, isSplit && { backgroundColor: '#e2e8f0', color: '#64748b' }]}
                     placeholder="0"
                     keyboardType="numeric"
                     value={amount}
                     onChangeText={setAmount}
-                    autoFocus
+                    autoFocus={!isSplit}
+                    editable={!isSplit}
                 />
+
+                {/* Split Payment Toggle */}
+                <View style={styles.splitToggleRow}>
+                    <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Split Payment Across Wallets</Text>
+                    <Switch 
+                        value={isSplit} 
+                        onValueChange={setIsSplit} 
+                        trackColor={{ false: "#e2e8f0", true: "#bfdbfe" }}
+                        thumbColor={isSplit ? "#2563eb" : "#f4f4f5"}
+                    />
+                </View>
+
+                {isSplit ? (
+                    <View style={styles.splitBox}>
+                        {paymentModes.map(mode => (
+                            <View key={mode._id} style={styles.splitInputGrp}>
+                                <Text style={styles.splitLabel}>{mode.name}</Text>
+                                <TextInput
+                                    style={styles.splitInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={splitAmounts[mode._id]?.toString() || ''}
+                                    onChangeText={(val) => setSplitAmounts(prev => ({...prev, [mode._id]: val}))}
+                                />
+                            </View>
+                        ))}
+                    </View>
+                ) : (
+                    <>
+                        <Text style={styles.inputLabel}>Payment Mode</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 20}}>
+                            {paymentModes.map(mode => (
+                                <TouchableOpacity 
+                                    key={mode._id}
+                                    style={[styles.modeBtn, selectedModeId === mode._id && styles.modeActive]}
+                                    onPress={() => setSelectedModeId(mode._id)}
+                                >
+                                    {mode.type === 'Cash' ? <Banknote size={16} color={selectedModeId === mode._id ? '#fff' : '#64748b'} /> : <CreditCard size={16} color={selectedModeId === mode._id ? '#fff' : '#64748b'} />}
+                                    <Text style={[styles.modeText, selectedModeId === mode._id && {color: '#fff'}]}>{mode.name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </>
+                )}
 
                 <Text style={styles.inputLabel}>Note (Optional)</Text>
                 <TextInput
@@ -282,6 +403,23 @@ const styles = StyleSheet.create({
   inputLabel: { fontSize: 13, fontWeight: 'bold', color: '#64748b', marginBottom: 8 },
   input: { backgroundColor: '#f8fafc', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', fontSize: 24, fontWeight: 'bold', color: '#0f172a', marginBottom: 20 },
   
+  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#f1f5f9', marginRight: 10, gap: 6 },
+  modeActive: { backgroundColor: '#0f172a' },
+  modeText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+
+  // Splits
+  splitToggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginTop: -10 },
+  splitBox: { gap: 10, marginBottom: 15 },
+  splitInputGrp: { marginBottom: 8 },
+  splitLabel: { fontSize: 13, color: '#64748b', marginBottom: 4 },
+  splitInput: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, padding: 12, fontSize: 16, fontWeight: 'bold', backgroundColor: '#f8fafc' },
+
   confirmBtn: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
-  confirmText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+  confirmText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
+  // History
+  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 8, marginBottom: 8 },
+  th: { fontSize: 12, fontWeight: 'bold', color: '#94a3b8' },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
+  td: { fontSize: 14, color: '#334155' },
 });

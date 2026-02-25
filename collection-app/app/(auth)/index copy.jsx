@@ -13,7 +13,7 @@ export default function LoginScreen() {
   
 
   // 🟢 Single State for Input
-  const [identifier, setIdentifier] = useState('9000668609'); 
+  const [identifier, setIdentifier] = useState('7702993009'); 
   const [password, setPassword] = useState('123456');
     
   const handleLogin = async () => {

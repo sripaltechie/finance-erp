@@ -5,7 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Building, MapPin, DollarSign, ShieldCheck, CheckCircle, Wallet } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createCompanyService } from '../../src/api/companyService';
+import { createCompanyService ,addPaymentModeService} from '../../src/api/companyService';
 
 export default function CompanySetupScreen() {
   const router = useRouter();
