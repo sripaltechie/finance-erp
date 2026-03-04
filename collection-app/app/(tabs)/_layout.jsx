@@ -1,17 +1,15 @@
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, Map, Search, User ,Building2} from 'lucide-react-native';
+import { LayoutDashboard, Map, Search, User, AlertCircle, Bell  } from 'lucide-react-native';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 🟢 Import this
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
 
 export default function TabLayout() {
-  const insets = useSafeAreaInsets(); // 🟢 Get safe area dimensions
-
-    
+  const insets = useSafeAreaInsets(); 
 
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // We usually hide default headers for custom look
+        headerShown: false, 
         tabBarStyle: {
           backgroundColor: '#060606',
           borderTopWidth: 1,
@@ -30,38 +28,53 @@ export default function TabLayout() {
       }}
     >
       {/* 1. HOME (Dashboard) */}
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
         }}
+      /> */}
+{/* 1. HOME (Reports Dashboard) */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Reports',
+          tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
+        }}
+      />
+      {/* 2. DUE TODAY (Defaulters) */}
+      <Tabs.Screen
+        name="due-list"
+        options={{
+          title: 'Defaulters',
+          tabBarIcon: ({ color, size }) => <AlertCircle size={size} color={color} />,
+        }}
       />
 
-      {/* 2. COLLECTION ROUTE (The Main Work Page) */}
+      {/* 3. COLLECTION ROUTE (The Main Work Page) */}
       <Tabs.Screen
         name="collection"
         options={{
-          title: 'My Route',
+          title: 'Collect',
           tabBarIcon: ({ color, size }) => (
             <View className="bg-blue-50 p-1 rounded-full">
-               {/* Highlight the main action button */}
               <Map size={size} color={color} />
             </View>
           ),
         }}
       />
 
-      {/* 3. CUSTOMER SEARCH */}
+      {/* 4. REMINDERS */}
       <Tabs.Screen
-        name="search"
+        name="reminders"
         options={{
-          title: 'Search',
-          tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
+          title: 'Reminders',
+          tabBarIcon: ({ color, size }) => <Bell size={size} color={color} />,
         }}
       />
 
-      {/* 4. PROFILE */}
+      {/* 5. PROFILE */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -69,12 +82,24 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
+      
+      {/* Hidden Screens inside tabs context */}
       <Tabs.Screen
         name="company-setup"
-        options={{
-          title: 'Company',
-          tabBarIcon: ({ color, size }) => <Building2 size={size} color={color} />,
-        }}
+        options={{ href: null }} 
+      />
+      {/* 4. CUSTOMER SEARCH */}
+      <Tabs.Screen
+        name="search"
+        options={{ href: null }} 
+        // options={{
+        //   title: 'Search',
+        //   tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
+        // }}
+      />
+      <Tabs.Screen
+        name="index1"
+        options={{ href: null }} 
       />
     </Tabs>
   );
